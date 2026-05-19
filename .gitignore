@@ -1,0 +1,14 @@
+# Build
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store
+
+# Editor
+.cursor/
+
+# Accidental artifacts
+grep
