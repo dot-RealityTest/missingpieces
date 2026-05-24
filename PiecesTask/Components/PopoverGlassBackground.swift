@@ -9,7 +9,6 @@ enum PopoverGlassStyle {
     static let shadowRadius: CGFloat = 22
     static let shadowY: CGFloat = 10
 
-    /// Shared chrome spacing for header, summary, and footer.
     static let chromeHorizontalPadding: CGFloat = 10
     static let chromeVerticalPadding: CGFloat = 7
     static let toolbarIconSize: CGFloat = 13
@@ -22,16 +21,7 @@ enum PopoverGlassStyle {
     static var insetPanelFill: Color {
         Color.primary.opacity(0.045)
     }
-
-    static var usesLiquidGlass: Bool {
-        if #available(macOS 26, *) {
-            return true
-        }
-        return false
-    }
 }
-
-// MARK: - Legacy vibrancy (macOS 14–25)
 
 struct GlassEffectView: NSViewRepresentable {
     var material: NSVisualEffectView.Material = .popover
@@ -58,24 +48,29 @@ struct PopoverWindowConfigurator: NSViewRepresentable {
         PopoverWindowConfiguratorView()
     }
 
-    func updateNSView(_ nsView: PopoverWindowConfiguratorView, context: Context) {
-        nsView.configure()
-    }
+    func updateNSView(_ nsView: PopoverWindowConfiguratorView, context: Context) {}
 }
 
 final class PopoverWindowConfiguratorView: NSView {
+    private weak var configuredWindow: NSWindow?
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        configure()
+        configureIfNeeded()
     }
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
-        configure()
+        configureIfNeeded(force: true)
     }
 
-    func configure() {
-        guard let window else { return }
+    func configureIfNeeded(force: Bool = false) {
+        guard let window else {
+            configuredWindow = nil
+            return
+        }
+        if !force, configuredWindow === window { return }
+        configuredWindow = window
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
@@ -86,106 +81,57 @@ final class PopoverWindowConfiguratorView: NSView {
     }
 }
 
-// MARK: - Modifiers
-
-private struct PopoverGlassChromeModifier: ViewModifier {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    func body(content: Content) -> some View {
-        if reduceTransparency {
-            content
-                .background(Color(nsColor: .windowBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.cornerRadius, style: .continuous))
-                .shadow(
-                    color: Color.black.opacity(0.18),
-                    radius: PopoverGlassStyle.shadowRadius,
-                    y: PopoverGlassStyle.shadowY
-                )
-        } else if #available(macOS 26, *) {
-            content
-                .background(PopoverWindowConfigurator())
-                .glassEffect(
-                    .regular,
-                    in: .rect(cornerRadius: PopoverGlassStyle.cornerRadius, style: .continuous)
-                )
-                .overlay { popoverBorder }
-                .shadow(
-                    color: Color.black.opacity(0.16),
-                    radius: PopoverGlassStyle.shadowRadius,
-                    y: PopoverGlassStyle.shadowY
-                )
-        } else {
-            content
-                .background {
-                    GlassEffectView()
-                        .ignoresSafeArea()
-                }
-                .background(PopoverWindowConfigurator())
-                .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.cornerRadius, style: .continuous))
-                .overlay { popoverBorder }
-                .shadow(
-                    color: Color.black.opacity(0.2),
-                    radius: PopoverGlassStyle.shadowRadius,
-                    y: PopoverGlassStyle.shadowY
-                )
-        }
-    }
-
-    private var popoverBorder: some View {
-        RoundedRectangle(cornerRadius: PopoverGlassStyle.cornerRadius, style: .continuous)
-            .strokeBorder(
-                Color.primary.opacity(PopoverGlassStyle.borderOpacity * 0.35),
-                lineWidth: 0.5
-            )
-    }
+private enum PopoverSurface {
+    case chrome
+    case inset
 }
 
-private struct PopoverListPanelModifier: ViewModifier {
+private struct PopoverSurfaceModifier: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    let surface: PopoverSurface
 
     func body(content: Content) -> some View {
-        if reduceTransparency {
-            content
-                .background(Color(nsColor: .controlBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous))
-        } else if #available(macOS 26, *) {
-            content
-                .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous))
-        } else {
-            content
-                .background(PopoverGlassStyle.insetPanelFill)
-                .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
-                }
+        switch surface {
+        case .chrome:
+            if reduceTransparency {
+                content
+                    .background(Color(nsColor: .windowBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.cornerRadius, style: .continuous))
+                    .shadow(color: Color.black.opacity(0.18), radius: PopoverGlassStyle.shadowRadius, y: PopoverGlassStyle.shadowY)
+            } else if #available(macOS 26, *) {
+                content
+                    .background(PopoverWindowConfigurator())
+                    .glassEffect(.regular, in: .rect(cornerRadius: PopoverGlassStyle.cornerRadius, style: .continuous))
+                    .overlay { chromeBorder(cornerRadius: PopoverGlassStyle.cornerRadius) }
+                    .shadow(color: Color.black.opacity(0.16), radius: PopoverGlassStyle.shadowRadius, y: PopoverGlassStyle.shadowY)
+            } else {
+                content
+                    .background { GlassEffectView().ignoresSafeArea() }
+                    .background(PopoverWindowConfigurator())
+                    .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.cornerRadius, style: .continuous))
+                    .overlay { chromeBorder(cornerRadius: PopoverGlassStyle.cornerRadius) }
+                    .shadow(color: Color.black.opacity(0.2), radius: PopoverGlassStyle.shadowRadius, y: PopoverGlassStyle.shadowY)
+            }
+        case .inset:
+            if reduceTransparency {
+                content
+                    .background(Color(nsColor: .controlBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous))
+            } else if #available(macOS 26, *) {
+                content
+                    .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous))
+            } else {
+                content
+                    .background(PopoverGlassStyle.insetPanelFill)
+                    .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous))
+                    .overlay { chromeBorder(cornerRadius: PopoverGlassStyle.listCornerRadius, opacity: 0.06) }
+            }
         }
     }
-}
 
-private struct PopoverSummaryGlassModifier: ViewModifier {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    func body(content: Content) -> some View {
-        if reduceTransparency {
-            content
-                .background(Color.purple.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous))
-        } else if #available(macOS 26, *) {
-            content
-                .glassEffect(
-                    .regular.tint(.purple.opacity(0.22)),
-                    in: .rect(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous)
-                )
-        } else {
-            content
-                .background(Color.purple.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: PopoverGlassStyle.listCornerRadius, style: .continuous)
-                        .strokeBorder(Color.purple.opacity(0.15), lineWidth: 0.5)
-                }
-        }
+    private func chromeBorder(cornerRadius: CGFloat, opacity: Double = PopoverGlassStyle.borderOpacity * 0.35) -> some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .strokeBorder(Color.primary.opacity(opacity), lineWidth: 0.5)
     }
 }
 
@@ -212,27 +158,17 @@ private struct PopoverToolbarButtonStyleModifier: ViewModifier {
 
 extension View {
     func popoverGlassChrome() -> some View {
-        modifier(PopoverGlassChromeModifier())
-    }
-
-    /// Same glass shell as the menu bar popover (Settings window).
-    func settingsGlassChrome() -> some View {
-        modifier(PopoverGlassChromeModifier())
+        modifier(PopoverSurfaceModifier(surface: .chrome))
     }
 
     func popoverListPanel() -> some View {
-        modifier(PopoverListPanelModifier())
-    }
-
-    func popoverSummaryGlass() -> some View {
-        modifier(PopoverSummaryGlassModifier())
+        modifier(PopoverSurfaceModifier(surface: .inset))
     }
 
     func popoverToolbarButtonStyle() -> some View {
         modifier(PopoverToolbarButtonStyleModifier())
     }
 
-    /// Groups nested glass surfaces (summary chip, etc.) on macOS 26+.
     @ViewBuilder
     func popoverGlassContentGroup() -> some View {
         if #available(macOS 26, *) {
@@ -241,6 +177,14 @@ extension View {
             }
         } else {
             self
+        }
+    }
+
+    /// Settings uses a real `NSWindow`; avoid popover glass/container loops on that surface.
+    func settingsWindowBackground() -> some View {
+        background {
+            GlassEffectView(material: .sidebar, blendingMode: .behindWindow)
+                .ignoresSafeArea()
         }
     }
 }

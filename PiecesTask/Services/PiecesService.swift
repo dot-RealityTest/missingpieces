@@ -32,25 +32,6 @@ final class PiecesService: @unchecked Sendable {
         cachedBaseURL = nil
     }
 
-    func checkConnectivity() async -> PiecesConnectivityInfo {
-        clearConnectivityCache()
-        guard let base = await resolveBaseURL() else {
-            return PiecesConnectivityInfo(
-                isAvailable: false,
-                baseURL: nil,
-                port: nil,
-                message: "Pieces OS is not running. Open the Pieces desktop app on this Mac."
-            )
-        }
-        let port = URL(string: base)?.port
-        return PiecesConnectivityInfo(
-            isAvailable: true,
-            baseURL: base,
-            port: port,
-            message: "Health check passed at \(base)"
-        )
-    }
-
     func fetchNextSteps(
         lookbackDays: Int = 7,
         maxSummaries: Int = 6,
@@ -81,6 +62,7 @@ final class PiecesService: @unchecked Sendable {
         let summaryIDs = try await listRecentSummaryIDs(fromISO: fromISO, limit: maxSummaries)
         var results: [PiecesNextStep] = []
         var seenSteps = Set<String>()
+        var seenSessions = Set<String>()
 
         for summaryID in summaryIDs {
             try Task.checkCancellation()
@@ -89,9 +71,11 @@ final class PiecesService: @unchecked Sendable {
             let summary = try await getWorkstreamSummary(id: summaryID)
             let sessionName = (summary["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
             let title = sessionName?.isEmpty == false ? sessionName! : "Recent work session"
+            let sessionKey = title.lowercased()
+            guard seenSessions.insert(sessionKey).inserted else { continue }
 
             var stepsFromSummary = 0
-            for annotationID in annotationIDs(from: summary).prefix(4) {
+            for annotationID in annotationIDsNewestFirst(from: summary) {
                 try Task.checkCancellation()
                 guard results.count < maxTotal, stepsFromSummary < maxStepsPerSummary else { break }
 
@@ -113,7 +97,8 @@ final class PiecesService: @unchecked Sendable {
                     stepsFromSummary += 1
                 }
 
-                if stepsFromSummary >= maxStepsPerSummary { break }
+                // Only trust the newest SUMMARY annotation for this work session.
+                break
             }
         }
 
@@ -144,12 +129,18 @@ final class PiecesService: @unchecked Sendable {
         try await getJSON("/annotation/\(id)")
     }
 
-    private func annotationIDs(from summary: [String: Any]) -> [String] {
+    private func annotationIDsNewestFirst(from summary: [String: Any]) -> [String] {
         guard let annotations = summary["annotations"] as? [String: Any],
               let indices = annotations["indices"] as? [String: Any] else {
             return []
         }
-        return Array(indices.keys)
+
+        return indices.compactMap { id, indexValue -> (String, Int)? in
+            guard let index = indexValue as? Int else { return nil }
+            return (id, index)
+        }
+        .sorted { $0.1 > $1.1 }
+        .map(\.0)
     }
 
     // MARK: - Port discovery
@@ -163,9 +154,6 @@ final class PiecesService: @unchecked Sendable {
         var ports: [Int] = []
         if let savedPort = UserDefaults.standard.object(forKey: portCacheKey) as? Int {
             ports.append(savedPort)
-        }
-        if let logPort = await Self.portFromLatestLog() {
-            ports.append(logPort)
         }
         ports.append(contentsOf: Self.candidatePorts)
 
@@ -216,53 +204,6 @@ final class PiecesService: @unchecked Sendable {
         } catch {
             return false
         }
-    }
-
-    private static func portFromLatestLog() async -> Int? {
-        await Task.detached(priority: .utility) {
-            portFromLatestLogSync()
-        }.value
-    }
-
-    private static func portFromLatestLogSync() -> Int? {
-        let logsDir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/com.pieces.os/production/Support/logs", isDirectory: true)
-        guard let files = try? FileManager.default.contentsOfDirectory(
-            at: logsDir,
-            includingPropertiesForKeys: [.contentModificationDateKey],
-            options: [.skipsHiddenFiles]
-        ) else { return nil }
-
-        let logFiles = files
-            .filter { $0.lastPathComponent.hasPrefix("log-") && $0.pathExtension == "txt" }
-            .sorted {
-                let d0 = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-                let d1 = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-                return d0 > d1
-            }
-
-        guard let latest = logFiles.first else { return nil }
-
-        let tail = tailText(of: latest, maxBytes: 65_536) ?? ""
-        let pattern = /OS#port:\s*(\d+)/
-        var lastPort: Int?
-        for line in tail.split(separator: "\n") {
-            if let match = line.firstMatch(of: pattern), let port = Int(match.1) {
-                lastPort = port
-            }
-        }
-        return lastPort
-    }
-
-    private static func tailText(of url: URL, maxBytes: Int) -> String? {
-        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
-        defer { try? handle.close() }
-
-        let fileSize = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-        let offset = max(0, fileSize - maxBytes)
-        try? handle.seek(toOffset: UInt64(offset))
-        guard let data = try? handle.readToEnd() else { return nil }
-        return String(data: data, encoding: .utf8)
     }
 
     // MARK: - HTTP

@@ -32,7 +32,7 @@ final class SettingsWindowPresenter: NSObject, NSWindowDelegate {
 
         if let window {
             applyWindowChrome(to: window)
-            window.setContentSize(NSSize(width: 560, height: 512))
+            window.setContentSize(NSSize(width: 480, height: 400))
             window.center()
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -51,7 +51,7 @@ final class SettingsWindowPresenter: NSObject, NSWindowDelegate {
         let window = NSWindow(contentViewController: hosting)
         window.title = "PiecesTask Settings"
         window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
-        window.setContentSize(NSSize(width: 560, height: 512))
+        window.setContentSize(NSSize(width: 480, height: 400))
         window.center()
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
@@ -74,7 +74,13 @@ final class SettingsWindowPresenter: NSObject, NSWindowDelegate {
 
     /// Hide the menu bar popover window so it does not compete with Settings for focus/updates.
     func close() {
+        appState?.cancelRefresh()
         window?.orderOut(nil)
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        close()
+        return false
     }
 
     private func dismissMenuBarPopover() {

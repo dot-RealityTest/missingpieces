@@ -51,34 +51,3 @@ struct MenuBarStatusLabel: View {
         return "\(connection) — right-click for menu"
     }
 }
-
-/// Small connection dot for use inside the popover (always visible on any header icon color).
-struct PiecesConnectionDot: View {
-    let isConnected: Bool
-    var hasProblem: Bool = false
-    var hasFollowUps: Bool = false
-    var size: CGFloat = 7
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        Circle()
-            .fill(fillColor)
-            .frame(width: size, height: size)
-            .overlay {
-                Circle()
-                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
-            }
-            .scaleEffect(isConnected && !hasProblem ? 1.0 : 0.92)
-            .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.gentle), value: isConnected)
-            .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.quick), value: hasProblem)
-            .accessibilityHidden(true)
-    }
-
-    private var fillColor: Color {
-        if hasProblem { return .orange }
-        if !isConnected { return Color(nsColor: .tertiaryLabelColor) }
-        if hasFollowUps { return Color(red: 0.20, green: 0.48, blue: 0.95) }
-        return Color(red: 0.13, green: 0.78, blue: 0.37)
-    }
-}

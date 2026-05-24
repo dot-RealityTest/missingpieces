@@ -1,105 +1,79 @@
 import AppKit
 import SwiftUI
 
-/// Read-only row — follow-up from Pieces or a connection problem. Click copies the text.
+/// Read-only row — follow-up from Pieces or a connection problem. Click expands; double-click copies.
 struct MissingRowView: View {
     let item: AttentionItem
     /// When the list is grouped by session, the section header already shows the session name.
     var showsSessionName: Bool = true
-    var onHide: (() -> Void)?
-    /// Pastel tint for follow-up rows when grouped by work session.
+    var onMarkDone: (() -> Void)?
+    /// Pastel tint for follow-up row icons when grouped by work session.
     var sectionAccent: Color?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var isHovering = false
+    @State private var isExpanded = false
     @State private var didCopy = false
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: leadingIcon)
-                .font(.caption)
-                .foregroundStyle(leadingIconColor)
-                .symbolRenderingMode(.hierarchical)
-                .frame(width: 18)
-                .contentTransition(.symbolEffect(.replace.downUp))
-                .symbolEffect(.bounce, value: didCopy)
-                .scaleEffect(iconScale)
-                .opacity(iconOpacity)
+    private var canExpand: Bool {
+        guard item.reason == .nextStep else { return false }
+        return expandedContent != nil
+    }
 
-            VStack(alignment: .leading, spacing: 2) {
+    private var expandedContent: String? {
+        PiecesNextStepsParser.displayExpandedContent(from: item.copyText)
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            leadingAccessory
+
+            VStack(alignment: .leading, spacing: isExpanded ? 6 : 2) {
                 Text(item.title)
-                    .font(.system(size: 12.5, weight: item.reason == .nextStep ? .regular : .medium))
+                    .font(.system(size: 12.5, weight: titleWeight))
                     .foregroundStyle(titleColor)
-                    .lineLimit(4)
+                    .lineLimit(item.reason == .nextStep ? 1 : (isExpanded ? nil : 1))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
-                    .contentTransition(.interpolate)
 
-                if item.reason.isProblem {
-                    Text(item.reason.label)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(reasonColor.opacity(isHovering ? 1 : 0.85))
-
-                    if let detail = item.detail, !detail.isEmpty {
-                        Text(detail)
-                            .font(.system(size: 10))
-                            .foregroundStyle(detailColor)
-                            .lineLimit(2)
-                    }
-                } else if showsSessionName, let detail = item.detail, !detail.isEmpty {
-                    Text(detail)
-                        .font(.system(size: 10))
-                        .foregroundStyle(detailColor)
-                        .lineLimit(1)
-                }
+                rowSecondaryContent
             }
 
-            if didCopy {
-                Text("Copied")
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.green)
-                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
-            }
+            trailingFeedback
         }
         .padding(.horizontal, PopoverGlassStyle.chromeHorizontalPadding)
-        .padding(.vertical, 5)
+        .padding(.vertical, isExpanded ? 8 : 5)
         .background(rowBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .offset(x: rowHoverOffset)
-        .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.gentle), value: isHovering)
-        .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.spring), value: didCopy)
-        .contentShape(Rectangle())
-        .onHover { hovering in
-            PopoverMotion.perform(reduceMotion: reduceMotion, PopoverMotion.quick) {
-                isHovering = hovering
-            }
-        }
-        .onTapGesture { copyTitle() }
+        .overlay(rowBorder)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.expand), value: isExpanded)
+        .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.quick), value: isHovering)
+        .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.feedback), value: didCopy)
+        .onHover { isHovering = $0 }
+        .onTapGesture(count: 2) { copyTitle() }
+        .onTapGesture(count: 1) { handleSingleTap() }
         .contextMenu { rowContextMenu }
         .help(helpText)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isExpanded ? .isSelected : [])
+        .accessibilityHint(helpText)
     }
 
     @ViewBuilder
-    private var rowContextMenu: some View {
-        Button("Copy") { copyTitle() }
-        if item.reason == .nextStep, let onHide {
-            Divider()
-            Button("Hide") { runRowAction(onHide) }
-        }
-    }
-
-    private var leadingIcon: String {
-        if didCopy { return "checkmark.circle.fill" }
-        return item.reason.icon
+    private var leadingAccessory: some View {
+        Image(systemName: item.reason.icon)
+            .font(.caption)
+            .foregroundStyle(leadingIconColor)
+            .symbolRenderingMode(.hierarchical)
+            .frame(width: 18)
     }
 
     private var leadingIconColor: Color {
-        if didCopy { return .green.opacity(0.9) }
         if item.reason == .nextStep, let sectionAccent {
-            return sectionAccent.opacity(isHovering ? 0.82 : 0.52)
+            return sectionAccent.opacity(isExpanded ? 0.88 : (isHovering ? 0.72 : 0.52))
         }
         if item.reason == .nextStep {
             return Color.primary.opacity(isHovering ? 0.55 : 0.4)
@@ -107,28 +81,89 @@ struct MissingRowView: View {
         return reasonColor.opacity(isHovering ? 0.95 : 0.78)
     }
 
-    private var iconScale: CGFloat {
-        if didCopy { return 1.05 }
-        if isHovering { return 1.03 }
-        return 1.0
+    @ViewBuilder
+    private var rowSecondaryContent: some View {
+        if item.reason.isProblem {
+            Text(item.reason.label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(reasonColor.opacity(isHovering ? 1 : 0.85))
+
+            if let detail = item.detail, !detail.isEmpty {
+                Text(detail)
+                    .font(.system(size: 10))
+                    .foregroundStyle(detailColor)
+                    .lineLimit(2)
+            }
+        } else if item.reason == .nextStep, isExpanded, canExpand {
+            expandedBody
+                .transition(PopoverMotion.revealTransition(reduceMotion: reduceMotion))
+        } else if item.reason == .nextStep, let detail = item.detail, !detail.isEmpty {
+            Text(detail)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.38))
+                .lineLimit(1)
+        } else if showsSessionName, let detail = item.detail, !detail.isEmpty {
+            Text(detail)
+                .font(.system(size: 10))
+                .foregroundStyle(detailColor)
+                .lineLimit(1)
+        }
     }
 
-    private var iconOpacity: Double {
-        if didCopy { return 1 }
-        if isHovering { return 1 }
-        return item.reason == .nextStep ? 0.88 : 0.92
+    private var expandedBody: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            PopoverGlassStyle.sectionDivider
+                .frame(height: 0.5)
+
+            if let expandedContent {
+                Text(expandedContent)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.primary.opacity(0.54))
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            }
+        }
     }
 
-    private var rowHoverOffset: CGFloat {
-        guard isHovering, !didCopy else { return 0 }
-        return reduceMotion ? 0 : 1
+    @ViewBuilder
+    private var trailingFeedback: some View {
+        if didCopy {
+            Image(systemName: "checkmark")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.green.opacity(0.92))
+                .frame(width: 14, height: 14)
+                .transition(.opacity)
+        } else {
+            Color.clear.frame(width: 14, height: 14)
+        }
+    }
+
+    @ViewBuilder
+    private var rowBorder: some View {
+        if isExpanded, canExpand {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5)
+        }
+    }
+
+    @ViewBuilder
+    private var rowContextMenu: some View {
+        if item.reason == .nextStep, onMarkDone != nil {
+            Button("Mark done") { markDone() }
+        }
+        Button("Copy") { copyTitle() }
+    }
+
+    private var titleWeight: Font.Weight {
+        item.reason == .nextStep ? .regular : .medium
     }
 
     private var titleColor: Color {
-        if didCopy { return Color.primary.opacity(0.78) }
         switch item.reason {
         case .nextStep:
-            return Color.primary.opacity(isHovering ? 1 : 0.88)
+            return Color.primary.opacity(isExpanded || isHovering ? 0.94 : 0.86)
         case .piecesUnavailable, .fetchFailed:
             return Color.primary.opacity(isHovering ? 0.82 : 0.62)
         }
@@ -139,19 +174,23 @@ struct MissingRowView: View {
     }
 
     private var rowBackground: Color {
-        if didCopy { return Color.green.opacity(PopoverGlassStyle.usesLiquidGlass ? 0.14 : 0.11) }
-        if isHovering {
-            return Color.primary.opacity(PopoverGlassStyle.usesLiquidGlass ? 0.06 : 0.05)
-        }
+        if didCopy { return Color.green.opacity(0.08) }
+        if isExpanded { return Color.primary.opacity(0.055) }
+        if isHovering { return Color.primary.opacity(0.04) }
         return .clear
     }
 
     private var helpText: String {
         if didCopy { return "Copied" }
-        if item.reason == .nextStep {
-            return "Click to copy · right-click to hide"
+        if canExpand {
+            return isExpanded
+                ? "Click to collapse · double-click to copy"
+                : "Click to expand · double-click to copy"
         }
-        return "Click to copy"
+        if item.reason == .nextStep {
+            return "Click or double-click to copy"
+        }
+        return "Double-click to copy"
     }
 
     private var reasonColor: Color {
@@ -163,26 +202,38 @@ struct MissingRowView: View {
         }
     }
 
+    private func handleSingleTap() {
+        if canExpand {
+            PopoverMotion.perform(reduceMotion: reduceMotion, PopoverMotion.expand) {
+                isExpanded.toggle()
+            }
+        } else {
+            copyTitle()
+        }
+    }
+
+    private func markDone() {
+        guard item.reason == .nextStep, let onMarkDone else { return }
+        PopoverMotion.perform(reduceMotion: reduceMotion, PopoverMotion.expand) {
+            isExpanded = false
+            onMarkDone()
+        }
+    }
+
     private func copyTitle() {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(item.title, forType: .string)
+        pasteboard.setString(item.copyText, forType: .string)
 
-        PopoverMotion.perform(reduceMotion: reduceMotion, PopoverMotion.spring) {
+        PopoverMotion.perform(reduceMotion: reduceMotion, PopoverMotion.feedback) {
             didCopy = true
         }
 
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1.1))
-            PopoverMotion.perform(reduceMotion: reduceMotion, PopoverMotion.gentle) {
+            try? await Task.sleep(for: .seconds(0.75))
+            PopoverMotion.perform(reduceMotion: reduceMotion, PopoverMotion.quick) {
                 didCopy = false
             }
-        }
-    }
-
-    private func runRowAction(_ action: () -> Void) {
-        PopoverMotion.perform(reduceMotion: reduceMotion) {
-            action()
         }
     }
 }

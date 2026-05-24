@@ -28,19 +28,13 @@ enum AttentionReason: String, CaseIterable, Sendable {
         case .piecesUnavailable, .fetchFailed: return true
         }
     }
-
-    var sortOrder: Int {
-        switch self {
-        case .piecesUnavailable: return 0
-        case .fetchFailed: return 1
-        case .nextStep: return 2
-        }
-    }
 }
 
 struct AttentionItem: Identifiable, Sendable {
     let id: String
     let title: String
+    /// Full text copied on double-click; equals `title` for connection problems.
+    let copyText: String
     let reason: AttentionReason
     let detail: String?
 }

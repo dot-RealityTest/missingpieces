@@ -10,14 +10,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appSettings: AppSettings.shared
         )
         rightClickMenu.start()
-        GlobalHotKeyService.shared.start(enabled: AppSettings.shared.globalShortcutEnabled)
         Task { @MainActor in
             await AppState.shared.probePiecesConnection()
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        GlobalHotKeyService.shared.stop()
         rightClickMenu.stop()
     }
 }
