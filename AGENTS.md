@@ -14,8 +14,8 @@
 ## Learned Workspace Facts
 
 - PiecesTask is a macOS 14+ menu bar app (SwiftUI `MenuBarExtra`, `.window` style, `LSUIElement` — no Dock icon) using Swift 6 and `@Observable` `AppState`. No SwiftData.
-- Git repo: branch **`mvp-trim`** is the trimmed core (Pieces fetch + list + local mark-done only). **`lean-core`** / **`main`** hold fuller builds with Ollama, global shortcut, undo banner, launch-at-login, and Connections settings tab.
-- Pieces OS is reached on localhost via `PiecesService` with dynamic port discovery (typically `39300`, fallback `1000`; caches port and can read `OS#port` from Pieces logs); application ID `app.piecestask`.
+- Git repo: **`main`** is the lean product (Pieces fetch + list + local mark-done). **`lean-core`** keeps the older fuller build (Ollama, hotkey, undo, etc.) for reference.
+- Pieces OS is reached on localhost via `PiecesService` with cached port + health checks (typically `39300`, fallback `1000`); application ID `app.piecestask`.
 - Inbound flow: `POST /materials/identifiers` (recent `WORKSTREAM_SUMMARIES`) → `GET /workstream_summary/{id}` → `GET /annotation/{id}` for `SUMMARY` text → `PiecesNextStepsParser` extracts `### **Next Steps**` bullets; `displayTitle` / `displaySubtitle` shorten row text for scanning.
 - Popover title: “What you're missing”. Empty state: “You're caught up”. Header: **Check again**, Settings — no Open Pieces OS launcher. List grouped by work session (`AttentionSection`); footer shows tap/done hint and loading state.
 - `MenuBarStatusIcon` / `AppStatusGlyphView`: shared app icon + status dot for menu bar and popover header.

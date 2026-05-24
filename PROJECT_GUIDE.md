@@ -1,5 +1,7 @@
 # PiecesTask — plain guide
 
+> **Out of date (May 2026).** The app on `main` is a read-only Pieces next-steps list — no Ollama, no local task list. See **`AGENTS.md`** for the current product.
+
 > **Quick start** — read through “How you run it”, then stop if that is enough.
 > **The rest** — optional depth when you want the full picture.
 

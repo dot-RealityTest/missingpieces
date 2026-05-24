@@ -1,5 +1,7 @@
 # PiecesTask — catch-up before you code
 
+> **Out of date (May 2026).** `main` is merged and lean. See **`AGENTS.md`** — build, open the menu bar popover, mark done / copy / expand rows.
+
 > **Before you code** — read headline + action list, then stop if ready.
 > **The rest** — optional depth.
 

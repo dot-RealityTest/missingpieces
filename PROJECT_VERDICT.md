@@ -1,5 +1,7 @@
 # PiecesTask — worth your time?
 
+> **Out of date (May 2026).** Verdict below describes an older task-app direction. Current app: read-only Pieces next-steps on `main`. See **`AGENTS.md`**.
+
 > **Quick verdict** — read the box and "What I'd do", then stop if you have your answer.
 > **The rest** — why, your context, alternatives, and honesty checks.
 
