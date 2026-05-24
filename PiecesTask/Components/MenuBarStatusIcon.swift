@@ -5,24 +5,52 @@ import SwiftUI
 @MainActor
 enum MenuBarStatusIcon {
     private static let canvasSize: CGFloat = 18
-    private static let symbolPointSize: CGFloat = 13
+    private static let glyphSide: CGFloat = 16
+
+    private static func loadAppGlyph() -> NSImage? {
+        if let image = Bundle.main.image(forResource: NSImage.Name("MenuBarIcon")) {
+            return image
+        }
+        if let icon = NSApplication.shared.applicationIconImage {
+            return icon
+        }
+        if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+           let icon = NSImage(contentsOf: url) {
+            return icon
+        }
+        return nil
+    }
 
     static func makeNSImage(
         isPiecesConnected: Bool,
         attentionCount: Int,
         hasProblemItems: Bool
     ) -> NSImage? {
-        let content = labelContent(
+        let fill = dotFill(
             isPiecesConnected: isPiecesConnected,
             attentionCount: attentionCount,
             hasProblemItems: hasProblemItems
         )
-        .frame(width: canvasSize, height: canvasSize)
+        let glyph = loadAppGlyph()
 
-        let renderer = ImageRenderer(content: content)
-        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
-        guard let image = renderer.nsImage else { return nil }
-        image.size = NSSize(width: canvasSize, height: canvasSize)
+        let image = NSImage(size: NSSize(width: canvasSize, height: canvasSize), flipped: false) { _ in
+            if let glyph {
+                let rect = NSRect(
+                    x: (canvasSize - glyphSide) / 2,
+                    y: (canvasSize - glyphSide) / 2,
+                    width: glyphSide,
+                    height: glyphSide
+                )
+                sized(glyph).draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1.0, respectFlipped: false, hints: [
+                    .interpolation: NSImageInterpolation.high
+                ])
+            } else {
+                drawFallbackGlyph()
+            }
+
+            drawStatusDot(fill: fill)
+            return true
+        }
         image.isTemplate = false
         return image
     }
@@ -33,46 +61,53 @@ enum MenuBarStatusIcon {
         attentionCount: Int,
         hasProblemItems: Bool
     ) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Image(systemName: "puzzlepiece.fill")
-                .font(.system(size: symbolPointSize, weight: .semibold))
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(Color(nsColor: .labelColor))
-                .frame(width: 15, height: 15)
-                .offset(x: -0.5, y: 0.5)
-
-            statusDot(
-                isPiecesConnected: isPiecesConnected,
-                attentionCount: attentionCount,
-                hasProblemItems: hasProblemItems
-            )
-            .offset(x: 4, y: -3)
-        }
-    }
-
-    @ViewBuilder
-    private static func statusDot(
-        isPiecesConnected: Bool,
-        attentionCount: Int,
-        hasProblemItems: Bool
-    ) -> some View {
-        let fill = dotFill(
+        AppStatusGlyphView(
             isPiecesConnected: isPiecesConnected,
             attentionCount: attentionCount,
             hasProblemItems: hasProblemItems
         )
-
-        Circle()
-            .fill(fill)
-            .frame(width: 6.5, height: 6.5)
-            .overlay {
-                Circle()
-                    .strokeBorder(dotRingColor, lineWidth: 1.25)
-            }
-            .shadow(color: .black.opacity(0.18), radius: 0.5, y: 0.5)
     }
 
-    private static func dotFill(
+    private static func sized(_ image: NSImage) -> NSImage {
+        let copy = (image.copy() as? NSImage) ?? image
+        copy.size = NSSize(width: glyphSide, height: glyphSide)
+        return copy
+    }
+
+    private static func drawFallbackGlyph() {
+        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
+        if let symbol = NSImage(systemSymbolName: "puzzlepiece.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(config) {
+            let side: CGFloat = 13
+            let rect = NSRect(
+                x: (canvasSize - side) / 2,
+                y: (canvasSize - side) / 2,
+                width: side,
+                height: side
+            )
+            symbol.draw(in: rect)
+        }
+    }
+
+    private static func drawStatusDot(fill: Color) {
+        let diameter: CGFloat = 6.5
+        let rect = NSRect(
+            x: canvasSize - diameter + 1,
+            y: canvasSize - diameter - 1,
+            width: diameter,
+            height: diameter
+        )
+
+        fill.nsColor.setFill()
+        NSBezierPath(ovalIn: rect).fill()
+
+        NSColor.windowBackgroundColor.setStroke()
+        let ring = NSBezierPath(ovalIn: rect.insetBy(dx: 0.4, dy: 0.4))
+        ring.lineWidth = 1.25
+        ring.stroke()
+    }
+
+    static func dotFill(
         isPiecesConnected: Bool,
         attentionCount: Int,
         hasProblemItems: Bool
@@ -83,7 +118,75 @@ enum MenuBarStatusIcon {
         return Color(red: 0.13, green: 0.78, blue: 0.37)
     }
 
-    private static var dotRingColor: Color {
+    fileprivate static var dotRingColor: Color {
         Color(nsColor: .windowBackgroundColor)
+    }
+
+    @ViewBuilder
+    fileprivate static func statusDotView(
+        isPiecesConnected: Bool,
+        attentionCount: Int,
+        hasProblemItems: Bool,
+        size: CGFloat
+    ) -> some View {
+        let fill = dotFill(
+            isPiecesConnected: isPiecesConnected,
+            attentionCount: attentionCount,
+            hasProblemItems: hasProblemItems
+        )
+
+        Circle()
+            .fill(fill)
+            .frame(width: size, height: size)
+            .overlay {
+                Circle()
+                    .strokeBorder(dotRingColor, lineWidth: 1.25)
+            }
+            .shadow(color: .black.opacity(0.18), radius: 0.5, y: 0.5)
+    }
+}
+
+/// Shared app icon + connection dot used in the menu bar and popover header.
+struct AppStatusGlyphView: View {
+    var isPiecesConnected: Bool
+    var attentionCount: Int
+    var hasProblemItems: Bool
+    var glyphSize: CGFloat = 16
+    var dotSize: CGFloat = 6.5
+    var dotOffset: CGSize = CGSize(width: 3, height: -2)
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            appGlyph
+                .frame(width: glyphSize, height: glyphSize)
+
+            MenuBarStatusIcon.statusDotView(
+                isPiecesConnected: isPiecesConnected,
+                attentionCount: attentionCount,
+                hasProblemItems: hasProblemItems,
+                size: dotSize
+            )
+            .offset(dotOffset)
+        }
+    }
+
+    @ViewBuilder
+    private var appGlyph: some View {
+        if Bundle.main.image(forResource: NSImage.Name("MenuBarIcon")) != nil {
+            Image("MenuBarIcon")
+                .resizable()
+                .interpolation(.high)
+        } else {
+            Image(systemName: "puzzlepiece.fill")
+                .font(.system(size: glyphSize * 0.78, weight: .semibold))
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(Color(nsColor: .labelColor))
+        }
+    }
+}
+
+private extension Color {
+    var nsColor: NSColor {
+        NSColor(self)
     }
 }

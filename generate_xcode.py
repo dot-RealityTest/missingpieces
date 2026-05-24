@@ -24,6 +24,10 @@ BCLID = xid("buildConfigList")
 BCDID = xid("debugConfig")
 BCRID = xid("releaseConfig")
 SBPID = xid("sourcesPhase")
+RBPID = xid("resourcesPhase")
+ASSETS = "PiecesTaskAssets.xcassets"
+ASSET_FID = xid(f"f:{ASSETS}")
+ASSET_BFID = xid(f"bf:{ASSETS}")
 PRID = xid("productRef")
 NTID = xid("nativeTarget")
 PXPID = xid("PBXProject")
@@ -49,6 +53,14 @@ for src in sources:
     L(f"\t\t\tsourceTree = SOURCE_ROOT;")
     L(f"\t\t}};")
 
+# Asset catalog
+L(f"\t\t{ASSET_FID} /* {ASSETS} */ = {{")
+L(f"\t\t\tisa = PBXFileReference;")
+L(f"\t\t\tlastKnownFileType = folder.assetcatalog;")
+L(f"\t\t\tpath = \"{ASSETS}\";")
+L(f"\t\t\tsourceTree = SOURCE_ROOT;")
+L(f"\t\t}};")
+
 # Product ref
 L(f"\t\t{PRID} /* PiecesTask.app */ = {{")
 L(f"\t\t\tisa = PBXFileReference;")
@@ -64,6 +76,7 @@ L(f"\t\t\tisa = PBXGroup;")
 L(f"\t\t\tchildren = (")
 # Products group
 L(f"\t\t\t\t{PGID} /* Products */,")
+L(f"\t\t\t\t{ASSET_FID} /* {ASSETS} */,")
 # Each source file
 for src in sources:
     fname = os.path.basename(src)
@@ -89,12 +102,18 @@ for src in sources:
     L(f"\t\t\tfileRef = {file_ids[src]};")
     L(f"\t\t}};")
 
+L(f"\t\t{ASSET_BFID} /* {ASSETS} in Resources */ = {{")
+L(f"\t\t\tisa = PBXBuildFile;")
+L(f"\t\t\tfileRef = {ASSET_FID};")
+L(f"\t\t}};")
+
 # Native target
 L(f"\t\t{NTID} = {{")
 L(f"\t\t\tisa = PBXNativeTarget;")
 L(f"\t\t\tbuildConfigurationList = {BCLID};")
 L(f"\t\t\tbuildPhases = (")
 L(f"\t\t\t\t{SBPID},")
+L(f"\t\t\t\t{RBPID},")
 L(f"\t\t\t);")
 L(f"\t\t\tbuildRules = (")
 L(f"\t\t\t);")
@@ -113,6 +132,15 @@ L(f"\t\t\trunOnlyForDeploymentPostprocessing = 0;")
 L(f"\t\t\tfiles = (")
 for src in sources:
     L(f"\t\t\t\t{bf_ids[src]},")
+L(f"\t\t\t);")
+L(f"\t\t}};")
+
+# Resources build phase
+L(f"\t\t{RBPID} = {{")
+L(f"\t\t\tisa = PBXResourcesBuildPhase;")
+L(f"\t\t\trunOnlyForDeploymentPostprocessing = 0;")
+L(f"\t\t\tfiles = (")
+L(f"\t\t\t\t{ASSET_BFID},")
 L(f"\t\t\t);")
 L(f"\t\t}};")
 

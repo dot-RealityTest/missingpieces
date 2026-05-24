@@ -14,10 +14,8 @@ final class AppSettings {
         static let refreshOnPopoverOpen = "piecesRefreshOnPopoverOpen"
         static let ollamaBaseURL = "ollamaBaseURL"
         static let ollamaSelectedModel = "ollamaSelectedModel"
-        static let ollamaCloudAPIKey = "ollamaCloudAPIKey"
         static let dismissedFollowUpIDs = "dismissedFollowUpIDs"
-        static let summaryReminderSchedule = "summaryReminderSchedule"
-        static let quickWinRemindersEnabled = "quickWinRemindersEnabled"
+        static let globalShortcutEnabled = "globalShortcutEnabled"
     }
 
     /// Follow-ups the user hid in this app only (not sent to Pieces).
@@ -34,7 +32,6 @@ final class AppSettings {
         }
     }
 
-    /// How far back to read workstream summaries.
     var lookbackDays: Int {
         didSet {
             let clamped = Self.clamp(lookbackDays, to: Self.lookbackOptions, default: 7)
@@ -43,7 +40,6 @@ final class AppSettings {
         }
     }
 
-    /// Max follow-up rows shown in the menu bar popover.
     var visibleItemLimit: Int {
         didSet {
             let clamped = Self.clamp(visibleItemLimit, to: Self.visibleLimitOptions, default: 8)
@@ -52,7 +48,6 @@ final class AppSettings {
         }
     }
 
-    /// Next steps pulled from each work session summary.
     var stepsPerSession: Int {
         didSet {
             let clamped = Self.clamp(stepsPerSession, to: Self.stepsPerSessionOptions, default: 2)
@@ -61,34 +56,19 @@ final class AppSettings {
         }
     }
 
-    /// When on, opening the popover checks Pieces again (not background polling).
     var refreshOnPopoverOpen: Bool {
         didSet {
             UserDefaults.standard.set(refreshOnPopoverOpen, forKey: Keys.refreshOnPopoverOpen)
         }
     }
 
-    /// macOS notification cadence for AI/plain follow-up summaries.
-    var summaryReminderSchedule: SummaryReminderSchedule {
+    var globalShortcutEnabled: Bool {
         didSet {
-            if summaryReminderSchedule != oldValue {
-                UserDefaults.standard.set(summaryReminderSchedule.rawValue, forKey: Keys.summaryReminderSchedule)
-            }
+            UserDefaults.standard.set(globalShortcutEnabled, forKey: Keys.globalShortcutEnabled)
+            GlobalHotKeyService.shared.start(enabled: globalShortcutEnabled)
         }
     }
 
-    var summaryRemindersEnabled: Bool {
-        summaryReminderSchedule != .off
-    }
-
-    /// Suggest one small follow-up about every 30 minutes.
-    var quickWinRemindersEnabled: Bool {
-        didSet {
-            UserDefaults.standard.set(quickWinRemindersEnabled, forKey: Keys.quickWinRemindersEnabled)
-        }
-    }
-
-    /// Ollama API base URL (local inference).
     var ollamaBaseURL: String {
         didSet {
             let normalized = OllamaService.normalizedBaseURL(ollamaBaseURL)
@@ -100,29 +80,12 @@ final class AppSettings {
         }
     }
 
-    /// Last successfully tested Ollama model name.
     var ollamaSelectedModel: String {
         didSet {
             UserDefaults.standard.set(ollamaSelectedModel, forKey: Keys.ollamaSelectedModel)
         }
     }
 
-    /// API key for Ollama cloud / remote models (`Authorization: Bearer …`).
-    var ollamaCloudAPIKey: String {
-        didSet {
-            UserDefaults.standard.set(ollamaCloudAPIKey, forKey: Keys.ollamaCloudAPIKey)
-        }
-    }
-
-    var hasOllamaCloudAPIKey: Bool {
-        !ollamaCloudAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    var selectedModelNeedsCloudAPIKey: Bool {
-        OllamaModelPreference.isCloudModel(ollamaSelectedModel)
-    }
-
-    /// Upper bound when fetching from Pieces (a bit above what we show).
     var fetchTotalLimit: Int {
         min(24, max(visibleItemLimit, stepsPerSession * 6))
     }
@@ -155,17 +118,13 @@ final class AppSettings {
             default: 2
         )
         refreshOnPopoverOpen = defaults.object(forKey: Keys.refreshOnPopoverOpen) as? Bool ?? true
-        summaryReminderSchedule = SummaryReminderSchedule.fromStored(
-            defaults.string(forKey: Keys.summaryReminderSchedule)
-        )
-        if defaults.object(forKey: Keys.quickWinRemindersEnabled) == nil {
-            quickWinRemindersEnabled = true
+        if defaults.object(forKey: Keys.globalShortcutEnabled) == nil {
+            globalShortcutEnabled = true
         } else {
-            quickWinRemindersEnabled = defaults.bool(forKey: Keys.quickWinRemindersEnabled)
+            globalShortcutEnabled = defaults.bool(forKey: Keys.globalShortcutEnabled)
         }
         ollamaBaseURL = defaults.string(forKey: Keys.ollamaBaseURL) ?? OllamaService.defaultBaseURL
         ollamaSelectedModel = defaults.string(forKey: Keys.ollamaSelectedModel) ?? ""
-        ollamaCloudAPIKey = defaults.string(forKey: Keys.ollamaCloudAPIKey) ?? ""
         if let stored = defaults.array(forKey: Keys.dismissedFollowUpIDs) as? [String] {
             dismissedFollowUpIDs = Set(stored)
         }
@@ -185,6 +144,12 @@ final class AppSettings {
         persistDismissedFollowUps()
     }
 
+    func restoreDismissedFollowUp(id: String) {
+        guard !id.isEmpty else { return }
+        dismissedFollowUpIDs.remove(id)
+        persistDismissedFollowUps()
+    }
+
     func restoreAllDismissedFollowUps() {
         dismissedFollowUpIDs.removeAll()
         persistDismissedFollowUps()
@@ -194,22 +159,11 @@ final class AppSettings {
         UserDefaults.standard.set(Array(dismissedFollowUpIDs), forKey: Keys.dismissedFollowUpIDs)
     }
 
-    /// Fills in a default model only when none is chosen or the saved name is gone.
-    /// Does not change the user's pick on connectivity test (keeps cloud/heavy models).
     func pickOllamaModel(from models: [OllamaModelInfo]) {
-        guard !models.isEmpty else {
-            ollamaSelectedModel = ""
-            return
-        }
-        let preferred = OllamaModelPreference.preferredLightModel(from: models) ?? models[0].name
-
-        if ollamaSelectedModel.isEmpty {
-            ollamaSelectedModel = preferred
-            return
-        }
-        if !models.contains(where: { $0.name == ollamaSelectedModel }) {
-            ollamaSelectedModel = preferred
-        }
+        ollamaSelectedModel = OllamaModelPreference.pickModelName(
+            current: ollamaSelectedModel,
+            from: models
+        )
     }
 
     func syncLaunchAtLoginFromSystem() {

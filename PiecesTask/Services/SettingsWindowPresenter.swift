@@ -4,14 +4,16 @@ import SwiftUI
 /// Presents Settings in a real window. Required for LSUIElement menu bar apps where
 /// `showSettingsWindow:` often does nothing.
 @MainActor
-final class SettingsWindowPresenter {
+final class SettingsWindowPresenter: NSObject, NSWindowDelegate {
     static let shared = SettingsWindowPresenter()
 
     private var window: NSWindow?
     private var appState: AppState?
     private var appSettings: AppSettings?
 
-    private init() {}
+    private override init() {
+        super.init()
+    }
 
     func configure(appState: AppState, appSettings: AppSettings) {
         self.appState = appState
@@ -29,32 +31,52 @@ final class SettingsWindowPresenter {
         dismissMenuBarPopover()
 
         if let window {
-            window.setContentSize(NSSize(width: 560, height: 460))
+            applyWindowChrome(to: window)
+            window.setContentSize(NSSize(width: 560, height: 512))
             window.center()
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
 
-        let rootView = SettingsView(appState: appState, appSettings: appSettings)
+        let rootView = SettingsView(
+            appState: appState,
+            appSettings: appSettings,
+            onDismiss: { [weak self] in self?.close() }
+        )
 
         let hosting = NSHostingController(rootView: rootView)
         hosting.safeAreaRegions = []
 
         let window = NSWindow(contentViewController: hosting)
         window.title = "PiecesTask Settings"
-        window.styleMask = [.titled, .closable, .miniaturizable]
-        window.setContentSize(NSSize(width: 560, height: 460))
+        window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+        window.setContentSize(NSSize(width: 560, height: 512))
         window.center()
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        window.delegate = self
+        applyWindowChrome(to: window)
 
         self.window = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    private func applyWindowChrome(to window: NSWindow) {
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.isMovableByWindowBackground = true
+        window.hasShadow = true
+    }
+
     /// Hide the menu bar popover window so it does not compete with Settings for focus/updates.
+    func close() {
+        window?.orderOut(nil)
+    }
+
     private func dismissMenuBarPopover() {
         for window in NSApp.windows where window !== self.window {
             let name = String(describing: type(of: window))

@@ -1,28 +1,23 @@
 import AppKit
-import UserNotifications
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let rightClickMenu = MenuBarRightClickMenuInstaller()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        SettingsWindowPresenter.shared.configure(
+            appState: AppState.shared,
+            appSettings: AppSettings.shared
+        )
         rightClickMenu.start()
-        UNUserNotificationCenter.current().delegate = SummaryNotificationService.shared
+        GlobalHotKeyService.shared.start(enabled: AppSettings.shared.globalShortcutEnabled)
         Task { @MainActor in
-            await AppModel.shared.appState.probePiecesConnection()
-            await SummaryNotificationService.shared.refreshAuthorizationStatus()
-            if AppSettings.shared.summaryRemindersEnabled {
-                SummaryNotificationService.shared.reschedule()
-            }
-            if AppSettings.shared.quickWinRemindersEnabled {
-                QuickWinNotificationService.shared.reschedule()
-            }
+            await AppState.shared.probePiecesConnection()
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        SummaryNotificationService.shared.stop()
-        QuickWinNotificationService.shared.stop()
+        GlobalHotKeyService.shared.stop()
         rightClickMenu.stop()
     }
 }

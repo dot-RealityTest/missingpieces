@@ -215,6 +215,11 @@ extension View {
         modifier(PopoverGlassChromeModifier())
     }
 
+    /// Same glass shell as the menu bar popover (Settings window).
+    func settingsGlassChrome() -> some View {
+        modifier(PopoverGlassChromeModifier())
+    }
+
     func popoverListPanel() -> some View {
         modifier(PopoverListPanelModifier())
     }

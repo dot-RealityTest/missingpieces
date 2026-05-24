@@ -1,39 +1,45 @@
+import AppKit
 import Foundation
 
 /// Read-only “what you're missing” — all data comes from Pieces OS.
 @MainActor
 @Observable
 final class AppState {
+    static let shared = AppState()
+
     var attentionSections: [AttentionSection] = []
     var isPiecesConnected: Bool = false
     var isLoading: Bool = false
     var lastPiecesCheckDate: Date?
     var lastPiecesError: String?
-    private var lastListRefreshDate: Date?
 
-    // MARK: - Connectivity (Settings)
-
-    var piecesConnectivityTest: ServiceConnectivityResult?
-    var ollamaConnectivityTest: ServiceConnectivityResult?
-    var ollamaModels: [OllamaModelInfo] = []
-    var isTestingPiecesConnectivity = false
-    var isTestingOllamaConnectivity = false
-    var isOllamaConnected = false
-
-    // MARK: - Ollama summary (popover)
-
-    var ollamaSummary: String?
+    var ollamaSummaryBrief: String?
     var ollamaSummaryError: String?
     var isGeneratingOllamaSummary = false
     var isOllamaSummaryExpanded = false
 
+    var hiddenNextStepsCount: Int = 0
+    var dismissedFollowUpCount: Int = 0
+    var undoOffer: FollowUpUndoOffer?
+
     private var refreshTask: Task<Void, Never>?
     private var summaryTask: Task<Void, Never>?
+    private var undoClearTask: Task<Void, Never>?
 
-    /// Steps found in Pieces but not shown in the popover (cap keeps the list glanceable).
-    var hiddenNextStepsCount: Int = 0
-    /// Follow-ups hidden by the user in this app (not sent to Pieces).
-    var dismissedFollowUpCount: Int = 0
+    private init() {}
+
+    var ollamaSummaryIsExpandable: Bool {
+        summaryFollowUpTitles.count > 1
+    }
+
+    func toggleOllamaSummaryExpanded() {
+        guard ollamaSummaryIsExpandable else { return }
+        isOllamaSummaryExpanded.toggle()
+    }
+
+    var summaryFollowUpTitles: [String] {
+        followUpItems.prefix(6).map(\.title)
+    }
 
     var attentionCount: Int {
         attentionSections.reduce(0) { $0 + $1.items.count }
@@ -53,23 +59,11 @@ final class AppState {
         attentionSections.flatMap(\.items).filter { $0.reason == .nextStep }
     }
 
-    /// Re-check Pieces and rebuild the missing list (popover open and “Check again”).
     func refreshMissingFromPieces() async {
         refreshTask?.cancel()
-        let task = Task {
-            await performRefreshMissingFromPieces()
-        }
+        let task = Task { await performRefreshMissingFromPieces() }
         refreshTask = task
         await task.value
-    }
-
-    /// Skips work if the list was refreshed recently (background reminders share one fetch).
-    func refreshMissingFromPiecesIfNeeded(minimumInterval: TimeInterval = 120) async {
-        if let last = lastListRefreshDate,
-           Date().timeIntervalSince(last) < minimumInterval {
-            return
-        }
-        await refreshMissingFromPieces()
     }
 
     func cancelRefresh() {
@@ -84,13 +78,40 @@ final class AppState {
         isGeneratingOllamaSummary = false
     }
 
-    /// Hide a follow-up in this app only. Pieces is unchanged.
-    func dismissFollowUp(id: String) {
+    func dismissFollowUp(id: String, title: String, sessionName: String) {
         guard !id.isEmpty else { return }
+        offerUndo(id: id, title: title, sessionName: sessionName)
         AppSettings.shared.dismissFollowUp(id: id)
         removeFollowUpFromSections(id: id)
-        ollamaSummary = nil
-        ollamaSummaryError = nil
+        clearSummaryIfNeeded()
+    }
+
+    func performUndo() async {
+        guard let offer = undoOffer else { return }
+        clearUndoOffer()
+        AppSettings.shared.restoreDismissedFollowUp(id: offer.id)
+        await refreshMissingFromPieces()
+    }
+
+    func dismissUndoOffer() {
+        clearUndoOffer()
+    }
+
+    @discardableResult
+    func copyAllVisibleFollowUpsToPasteboard() -> Int {
+        let items = followUpItems
+        guard !items.isEmpty else { return 0 }
+
+        let lines = items.map { item in
+            if let detail = item.detail, !detail.isEmpty {
+                return "- \(item.title) (\(detail))"
+            }
+            return "- \(item.title)"
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(lines.joined(separator: "\n"), forType: .string)
+        return items.count
     }
 
     func restoreDismissedFollowUps() async {
@@ -98,24 +119,43 @@ final class AppState {
         await refreshMissingFromPieces()
     }
 
-    /// Short AI summary of the visible follow-ups (Ollama on this Mac).
     func summarizeFollowUps() async {
         summaryTask?.cancel()
-        let task = Task {
-            await performSummarizeFollowUps()
-        }
+        let task = Task { await performSummarizeFollowUps() }
         summaryTask = task
         await task.value
     }
 
     func clearOllamaSummary() {
-        ollamaSummary = nil
+        ollamaSummaryBrief = nil
         ollamaSummaryError = nil
+        isOllamaSummaryExpanded = false
     }
 
-    /// Light status check for Settings — does not replace the popover list.
     func probePiecesConnection() async {
         isPiecesConnected = await PiecesService.shared.isAvailable()
+    }
+
+    private func offerUndo(id: String, title: String, sessionName: String) {
+        undoClearTask?.cancel()
+        undoOffer = FollowUpUndoOffer(id: id, title: title, sessionName: sessionName)
+        undoClearTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(6))
+            guard !Task.isCancelled, undoOffer?.id == id else { return }
+            undoOffer = nil
+        }
+    }
+
+    private func clearUndoOffer() {
+        undoClearTask?.cancel()
+        undoClearTask = nil
+        undoOffer = nil
+    }
+
+    private func clearSummaryIfNeeded() {
+        ollamaSummaryBrief = nil
+        ollamaSummaryError = nil
+        isOllamaSummaryExpanded = false
     }
 
     private func performRefreshMissingFromPieces() async {
@@ -125,7 +165,6 @@ final class AppState {
         dismissedFollowUpCount = 0
         defer {
             isLoading = false
-            lastListRefreshDate = Date()
             if refreshTask?.isCancelled == true {
                 refreshTask = nil
             }
@@ -190,57 +229,13 @@ final class AppState {
         }
     }
 
-    func checkPiecesConnection() async {
-        await probePiecesConnection()
-    }
-
-    /// Full Pieces connectivity test for Settings (rediscovers port).
-    func testPiecesConnectivity() async {
-        isTestingPiecesConnectivity = true
-        defer { isTestingPiecesConnectivity = false }
-
-        let info = await PiecesService.shared.checkConnectivity()
-        isPiecesConnected = info.isAvailable
-
-        if info.isAvailable {
-            let portText = info.port.map { "Port \($0)" } ?? "Port unknown"
-            piecesConnectivityTest = .success(
-                title: "Connected to Pieces OS",
-                detail: [info.baseURL, portText, info.message].compactMap { $0 }.joined(separator: "\n")
-            )
-            lastPiecesError = nil
-        } else {
-            piecesConnectivityTest = .failure(title: "Pieces OS is offline", detail: info.message)
-            lastPiecesError = info.message
-        }
-    }
-
-    /// Ollama connectivity test + model list for Settings.
-    func testOllamaConnectivity() async {
-        isTestingOllamaConnectivity = true
-        defer { isTestingOllamaConnectivity = false }
-
-        let settings = AppSettings.shared
-        let outcome = await OllamaService.shared.checkConnectivity(
-            baseURLString: settings.ollamaBaseURL,
-            apiKey: settings.ollamaCloudAPIKey
-        )
-        ollamaConnectivityTest = outcome.result
-        ollamaModels = outcome.models
-        isOllamaConnected = outcome.result.isConnected
-
-        if outcome.result.isConnected {
-            AppSettings.shared.pickOllamaModel(from: outcome.models)
-        }
-    }
-
     private func applyNextSteps(_ steps: [PiecesNextStep], visibleLimit: Int) {
         let settings = AppSettings.shared
         let active = steps.filter { step in
             let id = FollowUpItemID.make(summaryID: step.summaryID, stepText: step.stepText)
             return !settings.isDismissedFollowUp(id: id)
         }
-        dismissedFollowUpCount = steps.count - active.count
+        dismissedFollowUpCount = settings.dismissedFollowUpCount
 
         let visible = Array(active.prefix(visibleLimit))
         hiddenNextStepsCount = max(0, active.count - visible.count)
@@ -278,148 +273,20 @@ final class AppState {
             )
         }
         flushSection()
-
         attentionSections = sections
     }
 
     private func removeFollowUpFromSections(id: String) {
-        var updated: [AttentionSection] = []
-        for section in attentionSections {
+        attentionSections = attentionSections.compactMap { section in
             let items = section.items.filter { $0.id != id }
-            guard !items.isEmpty else { continue }
-            updated.append(
-                AttentionSection(
-                    id: section.id,
-                    sessionName: section.sessionName,
-                    items: items
-                )
+            guard !items.isEmpty else { return nil }
+            return AttentionSection(
+                id: section.id,
+                sessionName: section.sessionName,
+                items: items
             )
         }
-        attentionSections = updated
         dismissedFollowUpCount = AppSettings.shared.dismissedFollowUpCount
-    }
-
-    /// Strip model filler ("Here is a summary…") and keep one short sentence.
-    private static func sanitizeSummary(_ raw: String) -> String {
-        var text = raw
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if let firstLine = text.split(whereSeparator: \.isNewline).first {
-            text = String(firstLine).trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        text = stripWrappingQuotes(text)
-        text = stripThinkingMarkupFromSummary(text)
-
-        let preamblePatterns = [
-            #"(?i)^here'?s (a )?summary[^:]*:\s*"#,
-            #"(?i)^here is (a )?summary[^:]*:\s*"#,
-            #"(?i)^summary[^:]*:\s*"#,
-            #"(?i)^(the )?follow-ups?[^:]*one (short )?sentence[^:]*:\s*"#,
-            #"(?i)^in one (short )?sentence[^:]*:\s*"#,
-            #"(?i)^one (short )?sentence[^:]*:\s*"#,
-        ]
-        var stripped = true
-        while stripped {
-            stripped = false
-            for pattern in preamblePatterns {
-                guard let regex = try? NSRegularExpression(pattern: pattern),
-                      let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
-                      let range = Range(match.range, in: text) else { continue }
-                text = String(text[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
-                stripped = true
-            }
-        }
-
-        let lower = text.lowercased()
-        if text.contains(":"),
-           ["summary", "sentence", "follow-up", "follow up", "here is", "here's"].contains(where: { lower.contains($0) }),
-           let tail = text.split(separator: ":", maxSplits: 16, omittingEmptySubsequences: false).last {
-            let candidate = String(tail).trimmingCharacters(in: .whitespacesAndNewlines)
-            if candidate.count >= 12 { text = candidate }
-        }
-
-        text = firstSentence(text)
-        return clampSummary(text)
-    }
-
-    private static func stripThinkingMarkupFromSummary(_ text: String) -> String {
-        var s = text
-        if let regex = try? NSRegularExpression(
-            pattern: #"(?is)<think>.*?</think>\s*"#
-        ) {
-            let range = NSRange(s.startIndex..., in: s)
-            s = regex.stringByReplacingMatches(in: s, range: range, withTemplate: "")
-        }
-        return s.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private static func stripWrappingQuotes(_ text: String) -> String {
-        var s = text
-        let wrappers: [(String, String)] = [("\"", "\""), ("'", "'"), ("“", "”")]
-        for (open, close) in wrappers {
-            if s.hasPrefix(open), s.hasSuffix(close), s.count > open.count + close.count {
-                s = String(s.dropFirst(open.count).dropLast(close.count))
-            }
-        }
-        return s.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    /// First sentence only so we do not show rambling multi-sentence output.
-    private static func firstSentence(_ text: String) -> String {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count > 24 else { return trimmed }
-
-        var index = trimmed.startIndex
-        var seenNonSpace = 0
-        while index < trimmed.endIndex {
-            let ch = trimmed[index]
-            if !ch.isWhitespace { seenNonSpace += 1 }
-            if [".", "!", "?"].contains(ch), seenNonSpace >= 16 {
-                let end = trimmed.index(after: index)
-                return String(trimmed[..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-            index = trimmed.index(after: index)
-        }
-        return trimmed
-    }
-
-    /// Hard cap so the popover stays glanceable even if the model runs long.
-    private static func clampSummary(_ text: String) -> String {
-        let cleaned = text
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let maxChars = 200
-        guard cleaned.count > maxChars else { return cleaned }
-        let cut = cleaned.prefix(maxChars)
-        if let lastSpace = cut.lastIndex(of: " ") {
-            return String(cut[..<lastSpace])
-        }
-        return String(cut)
-    }
-
-    /// Short summary for notifications (Ollama when configured, otherwise plain text).
-    func makeFollowUpSummaryText() async -> String? {
-        let followUps = attentionSections.flatMap(\.items).filter { $0.reason == .nextStep }
-        guard !followUps.isEmpty else { return nil }
-
-        let settings = AppSettings.shared
-        if settings.canUseOllamaSummary {
-            if let text = await Self.generateOllamaSummary(
-                followUps: followUps,
-                settings: settings
-            ).text {
-                return text
-            }
-        }
-        return Self.plainSummary(from: followUps)
-    }
-
-    /// Plain reminder when Ollama is off or unavailable.
-    func fallbackReminderText() -> String? {
-        let followUps = attentionSections.flatMap(\.items).filter { $0.reason == .nextStep }
-        guard !followUps.isEmpty else { return nil }
-        return Self.plainSummary(from: followUps)
     }
 
     private func performSummarizeFollowUps() async {
@@ -429,7 +296,7 @@ final class AppState {
             return
         }
 
-        let followUps = attentionSections.flatMap(\.items).filter { $0.reason == .nextStep }
+        let followUps = followUpItems
         guard !followUps.isEmpty else {
             ollamaSummaryError = "No follow-ups to summarize yet."
             return
@@ -449,18 +316,10 @@ final class AppState {
 
         let outcome = await Self.generateOllamaSummary(followUps: followUps, settings: settings)
         if let text = outcome.text {
-            ollamaSummary = text
+            ollamaSummaryBrief = text
             ollamaSummaryError = nil
-            let check = await OllamaService.shared.checkConnectivity(
-                baseURLString: settings.ollamaBaseURL,
-                apiKey: settings.ollamaCloudAPIKey
-            )
-            isOllamaConnected = check.result.isConnected
-            if check.result.isConnected {
-                ollamaModels = check.models
-            }
         } else {
-            ollamaSummary = nil
+            ollamaSummaryBrief = nil
             ollamaSummaryError = outcome.error ?? "Could not get a summary from Ollama."
         }
     }
@@ -474,23 +333,24 @@ final class AppState {
         followUps: [AttentionItem],
         settings: AppSettings
     ) async -> OllamaSummaryOutcome {
-        if OllamaModelPreference.isCloudModel(settings.ollamaSelectedModel),
-           !settings.hasOllamaCloudAPIKey {
-            return OllamaSummaryOutcome(
-                text: nil,
-                error: "Add your Ollama cloud API key in Settings → Connections."
-            )
-        }
-
-        let bulletLines = followUps.prefix(6).map { "- \($0.title)" }.joined(separator: "\n")
+        let bulletLines = followUps.prefix(6).map { "• \($0.title)" }.joined(separator: "\n")
         let system = """
-        You write exactly one short sentence. No preamble, labels, or meta text (never say "here is", "summary", or "in one sentence"). \
-        Start with a verb. Name the single best next task using words from the list. Max 14 words. No lists. No ellipsis.
+        You write one line for a macOS menu bar popover. The user will glance at it for one second.
+
+        Output rules (strict):
+        - Exactly one short sentence, 6–10 words
+        - Start with a verb (Reply, Fix, Ship, Review, Call, Send, Finish…)
+        - Name the single highest-impact task using words from the list
+        - Plain language, direct, calm — not urgent
+        - No preamble, labels, quotes, colons, bullets, or meta text
+        - Never say: summary, follow-up, here is, you should, there are
         """
         let prompt = """
-        Pick the one best next task from these follow-ups:
+        Pick the one best next action from these follow-ups:
 
         \(bulletLines)
+
+        Next action:
         """
 
         let result = await OllamaService.shared.generateText(
@@ -498,19 +358,14 @@ final class AppState {
             model: settings.ollamaSelectedModel,
             prompt: prompt,
             system: system,
-            apiKey: settings.ollamaCloudAPIKey,
-            maxTokens: 72
+            maxTokens: 40
         )
 
         switch result {
         case .success(let text):
-            let sanitized = sanitizeSummary(text)
-            if !sanitized.isEmpty {
-                return OllamaSummaryOutcome(text: sanitized, error: nil)
-            }
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty {
-                return OllamaSummaryOutcome(text: clampSummary(trimmed), error: nil)
+            let line = cleanSummaryLine(text, maxChars: 100)
+            if !line.isEmpty {
+                return OllamaSummaryOutcome(text: line, error: nil)
             }
             return OllamaSummaryOutcome(text: plainSummary(from: followUps), error: nil)
         case .failure(let err):
@@ -518,12 +373,31 @@ final class AppState {
         }
     }
 
-    private static func plainSummary(from followUps: [AttentionItem]) -> String {
-        let count = followUps.count
-        let lead = followUps.prefix(2).map(\.title).joined(separator: " · ")
-        if count == 1 {
-            return lead
+    private static func cleanSummaryLine(_ raw: String, maxChars: Int = 120) -> String {
+        var text = raw
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let firstLine = text.split(whereSeparator: \.isNewline).first {
+            text = String(firstLine).trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        return "\(count) follow-ups — start with: \(lead)"
+        if let regex = try? NSRegularExpression(
+            pattern: #"(?is)<think>.*?</think>\s*"#
+        ) {
+            let range = NSRange(text.startIndex..., in: text)
+            text = regex.stringByReplacingMatches(in: text, range: range, withTemplate: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        guard text.count > maxChars else { return text }
+        let cut = text.prefix(maxChars)
+        if let lastSpace = cut.lastIndex(of: " ") {
+            return String(cut[..<lastSpace])
+        }
+        return String(cut)
+    }
+
+    private static func plainSummary(from followUps: [AttentionItem]) -> String? {
+        guard let first = followUps.first?.title else { return nil }
+        if followUps.count == 1 { return first }
+        return "\(followUps.count) follow-ups — \(first)"
     }
 }

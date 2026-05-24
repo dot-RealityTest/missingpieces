@@ -1,22 +1,24 @@
 # PiecesTask — catch-up before you code
 
-> **Before you code** — read the headline and action list, then stop if you're ready.
-> **The rest** — updates, tools, skills, and links.
+> **Before you code** — read headline + action list, then stop if ready.
+> **The rest** — optional depth.
 
 ---
 
 ## Before you code
 
-**Headline:** Safe to open and build again—you are not missing a breaking stack change—but finish or delete the half-wired Pieces sync before adding features.
+**Headline:** You can pick up safely—the app is now a **read-only Pieces “next steps” glance** with glass UI and local triage—but **`PROJECT_GUIDE.md` and this file’s older version were wrong** (they still described a SwiftData to-do app). Build, smoke-test Pieces on port **39300**, then commit or trim the large uncommitted polish on `main`.
 
 **Do these first (if any):**
 
-1. Run a quick build to confirm your Mac still compiles it: `xcodebuild -project PiecesTask.xcodeproj -target PiecesTask -configuration Debug build` (see `PROJECT_GUIDE.md`).
-2. Start **Pieces OS**, open the app, and confirm Settings → Pieces shows **Connected**.
-3. If you target **macOS 26** (Tahoe) soon: read Apple’s note that status bar internals changed (`NSSceneStatusItem`)—only matters if you add libraries that poke at `NSStatusItem` directly; your plain `MenuBarExtra` is fine for now.
-4. Before editing API calls: skim the official **Pieces OS TypeScript SDK** (annotations / workstream) if raw REST paths fail—your app uses hand-rolled `POST /annotations` and `GET /workstream_events`, which may not match every Pieces OS version.
+1. **Build and launch** (Pieces OS running):  
+   `xcodebuild -project PiecesTask.xcodeproj -target PiecesTask -configuration Debug build` → `open build/Debug/PiecesTask.app`  
+   Settings → **Connections** → test Pieces + Ollama.
+2. **Refresh `PROJECT_GUIDE.md`** — remove to-do/SwiftData/outbound-sync wording; match “What you're missing”, glass Settings, ⌃⌥P shortcut, triage (save/snooze/hide), prompt-only Ollama brief line.
+3. **Decide on git** — one initial commit exists (2026-05-19); many local changes (glass, icons, triage, summary prompt, hotkey) are still uncommitted. Commit when the build feels right, or stash what you do not want.
+4. **Ollama summary check** — tap sparkles after a refresh; confirm the chip is one short line (prompt enforces 6–10 words, `think: false`). If a thinking model still leaks tags, switch model or tighten the prompt (known Ollama quirk on some models).
 
-**You can ignore for now:** Moving to Swift 6.2 “approachable concurrency” project-wide, Liquid Glass redesign, App Intents, TestFlight—none are required to resume this repo.
+**You can ignore for now:** Outbound task sync to Pieces, SwiftData, App Intents, TestFlight, full Swift 6.2 concurrency migration, replacing Carbon hotkeys unless you sandbox the app.
 
 ---
 
@@ -26,68 +28,78 @@
 
 | Piece | In this project | Note |
 |-------|-----------------|------|
-| macOS deployment | 14.0 (`Info.plist`, Xcode) | Your machine may run macOS 26 SDK via Xcode 26.x |
-| Swift | 6.0 | Matches current Xcode Swift 6 language mode |
-| UI | SwiftUI `MenuBarExtra`, `.window` style | Modern menu bar panel pattern |
-| State | `@Observable` `AppState` | Already on Observation, not legacy `ObservableObject` |
-| Data | SwiftData `@Model` `TaskItem` | Local persistence, no CloudKit in project |
-| Pieces | HTTP `localhost:1000` | Health: `/.well-known/health`; custom REST paths in `PiecesService` |
-| Git | Not initialized in folder | No `git log` for this root |
-| README / docs | None | You now have `PROJECT_GUIDE.md` |
+| macOS | **14.0** deployment (`Info.plist`, Xcode) | Liquid Glass path on **macOS 26+**, vibrancy fallback below |
+| Swift | **6.0** | `@Observable` `AppState`; no SwiftData |
+| UI | `MenuBarExtra` **`.window`**, `LSUIElement` | AppKit bridge for menu bar right-click + global hotkey |
+| Pieces | `PiecesService` → localhost **39300** (fallback **1000**) | Inbound only: workstream summaries → SUMMARY annotations → **Next Steps** parser |
+| Ollama | `OllamaService` | Tags + generate; **`think: false`** for brief summary |
+| Persistence | **UserDefaults** | Settings, hidden/saved/snoozed follow-up IDs |
+| Build | `xcodebuild` + `python3 generate_xcode.py` after new `.swift` files | Bundle ID `app.piecestask` |
+| Git | **`main`**, initial commit 2026-05-19 | Large working tree since polish session |
+| Agent memory | `AGENTS.md` (project) | Pieces-first, read-only, compact glass UI |
 
 ### Must know
 
-| What | Why it matters to you | Source |
-|------|----------------------|--------|
-| **Pieces integration in code ≠ product behavior** | UI suggests sync; `saveTask` is never called from add/complete flows | This repo (`AppState`, `AddTaskView`) |
-| **Menu bar Settings on macOS 26** | `SettingsLink` / focus issues reported for menu bar apps; you use `NSApp.sendAction(Selector(("showSettingsWindow:")), ...)` | [Zachary Armstead — menu bar settings](https://zacharmstead.com/posts/2025/showing-settings-from-macos-menu-bar-items), [Apple MenuBarExtra](https://developer.apple.com/documentation/SwiftUI/MenuBarExtra) |
-| **Pieces SDK moved (mid-2025)** | If you switch from raw HTTP to SDK, annotation APIs had large updates in TS SDK 4.x | [pieces-os-client-sdk-for-typescript](https://github.com/pieces-app/pieces-os-client-sdk-for-typescript) |
+| What | Why it matters | Severity |
+|------|----------------|----------|
+| **Product model changed** | No local task list; no push to Pieces. UI is follow-ups from workstream summaries + local hide/save/snooze only. | **Must know** |
+| **`PROJECT_GUIDE.md` is stale** | Still says menu bar to-do, SwiftData, header “Open Pieces OS”. Code and `AGENTS.md` disagree—fix guide before trusting docs. | **Must know** |
+| **Pieces port** | Docs and blogs standardize on **39300**; your service already discovers port (logs/cache). Health on wrong port = gray dot, empty list. | **Must know** |
+| **Uncommitted polish** | Glass Settings, custom menu bar asset, triage + undo banner, ⌃⌥P, summary prompt tuning—verify before next feature. | **Must know** |
+| **Ollama `think: false`** | Required for short summaries; some thinking models may still leak ``-style tags ([Ollama #11010](https://github.com/ollama/ollama/issues/11010)). | **Worth a look** |
 
 ### Worth a look — updates & features
 
-- **Swift Observation / `@Observable`:** You already use it for `AppState`; when touching views, prefer `@Environment(AppState.self)` and `@Bindable` patterns per [Apple’s migration guide](https://developer.apple.com/documentation/SwiftUI/Migrating-from-the-observable-object-protocol-to-the-observable-macro).
-- **SwiftData:** iOS/macOS 26 guides emphasize migrations and production patterns if you add fields to `TaskItem`—plan a schema bump before shipping widely. [Swift Crafted SwiftData guide](https://swiftcrafted.dev/article/swiftdata-from-zero-to-production-models-queries-migrations-and-performance).
-- **MenuBarExtra:** Community package [MenuBarExtraAccess](https://github.com/orchetect/MenuBarExtraAccess) updated for macOS 26 if you need programmatic menu control later—optional, not in your project today.
+- **Liquid Glass (macOS 26):** Apple’s WWDC25 design pushes `.glassEffect()` and updated toolbars; your `PopoverGlassBackground` / `settingsGlassChrome` already gate on OS version—no need to bump deployment target unless you drop pre-26 support. [WWDC25 session 323](https://developer.apple.com/videos/play/wwdc2025/323/)
+- **Swift Observation:** You already use `@Observable`; when touching views, keep `@Environment(AppState.self)` / `@Bindable` patterns per [Apple migration guide](https://developer.apple.com/documentation/SwiftUI/Migrating-from-the-observable-object-protocol-to-the-observable-macro).
+- **Menu bar on macOS 26:** Status item internals shifted (`NSSceneStatusItem`); plain `MenuBarExtra` + custom `NSImage` (your puzzle-piece + dot) is still the right pattern unless you depend on private status-item hacks.
+- **Pieces MCP truncation:** `ask_pieces_ltm` may truncate long `combined_string` fields (~400 chars)—use `workstream_summaries_batch_snapshot` or repo files for full context, not only MCP summaries. [pieces-app/support#992](https://github.com/pieces-app/support/issues/992)
 
 ### Worth a look — tools & integrations
 
-- **Pieces MCP in Cursor** (you already use it): `search_memory`, `ask_pieces_ltm`, `create_pieces_memory` often replace custom REST for agent workflows—useful alongside this app, not a duplicate of it.
-- **Things 3 / Apple Reminders (2025–2026):** Reminders gained smarter lists and AI-adjacent features; Things still wins on calm UX for pure tasks—relevant if you question building another list app. [Things vs Reminders discussion](https://medium.com/the-mac-alchemist/things-3-vs-apple-reminders-i-paid-60-for-a-to-do-app-was-i-wrong-7161737e19d5).
+- **Pieces MCP (Cursor):** `material_identifiers`, `workstream_summaries_batch_snapshot`, `search_memory` complement the app—good for agent debugging, not a replacement for in-app refresh.
+- **Pieces OS TypeScript SDK:** If REST paths drift, compare `PiecesService` with [pieces-os-client-sdk-for-typescript](https://github.com/pieces-app/pieces-os-client-sdk-for-typescript) before hand-rolling more endpoints.
+- **Global shortcut:** Your `GlobalHotKeyService` likely uses Carbon `RegisterEventHotKey`—fine for a non-sandbox menu bar utility; sandboxed / App Store builds would need **Input Monitoring** + `CGEventTap` or [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) instead.
 
 ### Worth a look — Cursor skills & MCP
 
-| Name | What it helps with | How to try |
-|------|-------------------|------------|
-| `macos-menubar-swiftui` / `swiftui-menu-bar-extra-patterns` | Menu bar app structure | In Cursor: `@` skill name or install from your Codex skill library |
-| `xcodebuildmcp-cli` / `ios-debugger-agent` | Build and run from agent | AGENTS.md in home folder references XcodeBuildMCP |
-| `pieces-integration` / Pieces MCP rule | LTM, workstream, memories | Already in workspace rules (`pieces-mcp.mdc`) |
-| `explain-new-project` / `project-worth-my-time` / `project-catch-up` | Onboarding docs for any repo | You just used these on PiecesTask |
-
-**Learn:** An **MCP server** is a plug-in that lets Cursor talk to a local app (like Pieces) with structured tools instead of you copying context by hand.
+| Skill / MCP | Use on this repo |
+|-------------|------------------|
+| `pieces-integration` + **user-pieces** MCP | Debug workstreams, last-session context, memories |
+| `macos-menubar-swiftui` / `swiftui-menu-bar-extra-patterns` | Menu bar + `.window` popover patterns |
+| `swiftui-glass-ui` / `liquid-glass-design` | Glass chrome tuning |
+| `xcodebuildmcp-cli` | Build/run from agent (per home `AGENTS.md`) |
+| `ollama-model-picker-ux` / `ollama-error-handling` | Model list + connectivity tests |
+| `macos-global-shortcuts` | Review ⌃⌥P implementation |
+| `project-catch-up` / `explain-new-project` | Docs you are reading now |
 
 ### Nice to have
 
-- Add a minimal `README.md` pointing to `PROJECT_GUIDE.md` and build commands.
-- `git init` + first commit after your next working session.
-- App icon in `PiecesTaskAssets.xcassets` (catalog exists; icon set may be empty).
-- Wire **Launch at Login** properly (`ServiceManagement`) if you rely on menu bar apps daily.
+- Align **README** (if added) → single link to `PROJECT_GUIDE.md`.
+- **Commit** after smoke test: icons, glass Settings, triage, hotkey, summary prompt.
+- **Featured image / App Store** assets if you ship beyond personal use.
+- **Launch at login** — confirm `ServiceManagement` behavior if you rely on always-on menu bar presence.
 
 ### Ignore for now
 
-- Rewriting in Tuist or SPM-only unless you are standardizing all Mac apps that way.
-- Competing with Things/Reminders on features (locations, collaboration, AI lists).
-- macOS 26 Liquid Glass pass before core Pieces sync works.
+- Rewriting in Tuist/SPM-only unless you standardize all Mac apps that way.
+- Competing with Things / Reminders feature depth.
+- Moving every hotkey to sandbox-friendly APIs before you need distribution.
+- Full macOS 26–only Liquid Glass (dropping macOS 14–25 vibrancy fallback).
 
 ### When you last worked on this
 
-**About May 12, 2026** (evening): built with `xcodebuild`, opened `PiecesTask.app`, iterated `PiecesService` and settings in Xcode/Lapapi sessions. No strong evidence of edits in the last ~4 days before today (May 16, 2026); your attention has been on Lapapi, V8V/KIKA sites, and other shipping work.
+- **Pieces LTM:** Heavy **2026-05-18** evening sessions—Pieces integration first, pivot to **read-only** follow-ups, UI polish, continual-learning on `AGENTS.md`, build/launch loops in Cursor.
+- **Git:** Last commit **2026-05-19** — “Initial commit: PiecesTask with polished menu bar and settings UI.”
+- **Since then (agent/context):** Glass Settings matching popover, custom menu bar icon, follow-up triage + undo, global ⌃⌥P, Ollama brief-line prompt (no UI ellipsis chop), summary panel expand behavior—mostly **uncommitted** as of **2026-05-22**.
 
 ### Sources checked
 
-- Project source files under `/Users/kika_hub/Projects/PiecesTask/PiecesTask/`
-- Pieces LTM (`get_user_persona`, `ask_pieces_ltm`) — May 2026 activity
-- [Apple MenuBarExtra documentation](https://developer.apple.com/documentation/SwiftUI/MenuBarExtra)
-- [MenuBarExtraAccess macOS 26 issue](https://github.com/orchetect/MenuBarExtraAccess/issues/20)
-- [Observable migration (Apple)](https://developer.apple.com/documentation/SwiftUI/Migrating-from-the-observable-object-protocol-to-the-observable-macro)
-- [Pieces OS TypeScript SDK repo](https://github.com/pieces-app/pieces-os-client-sdk-for-typescript)
-- Web search: Things 3 vs Reminders 2025–2026, Cursor menu bar skill tools
+- `/Users/kika_hub/Projects/PiecesTask/PROJECT_GUIDE.md`, `AGENTS.md`, `Info.plist`, `project.pbxproj`
+- Pieces MCP: `time_compute` (now), `ask_pieces_ltm` (PiecesTask activity)
+- `git log -1` (2026-05-19)
+- [Apple MenuBarExtra](https://developer.apple.com/documentation/SwiftUI/MenuBarExtra), [WWDC25 Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/323/)
+- [Ollama thinking / `think` parameter](https://docs.ollama.com/capabilities/thinking), [Ollama issue #11010](https://github.com/ollama/ollama/issues/11010)
+- [Pieces OS port 39300 / MCP](https://docs.pieces.app/products/mcp/google-gemini-cli), [MCP truncation issue](https://github.com/pieces-app/support/issues/992)
+- [Apple DTS on global hotkeys](https://developer.apple.com/forums/thread/735223), [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts)
+- Web: Swift 6.2 / macOS 26 menu bar + Liquid Glass summaries (May 2026)

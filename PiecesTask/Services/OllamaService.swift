@@ -19,10 +19,7 @@ final class OllamaService: @unchecked Sendable {
         self.generateSession = URLSession(configuration: generateConfig)
     }
 
-    func checkConnectivity(
-        baseURLString: String,
-        apiKey: String? = nil
-    ) async -> (result: ServiceConnectivityResult, models: [OllamaModelInfo]) {
+    func checkConnectivity(baseURLString: String) async -> (result: ServiceConnectivityResult, models: [OllamaModelInfo]) {
         let base = Self.normalizedBaseURL(baseURLString)
 
         guard let tagsURL = URL(string: "\(base)/api/tags") else {
@@ -33,7 +30,6 @@ final class OllamaService: @unchecked Sendable {
         }
 
         var request = URLRequest(url: tagsURL)
-        Self.applyAuthorization(to: &request, apiKey: apiKey)
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -83,20 +79,11 @@ final class OllamaService: @unchecked Sendable {
 
     static let defaultBaseURL = "http://127.0.0.1:11434"
 
-    static func applyAuthorization(to request: inout URLRequest, apiKey: String?) {
-        let trimmed = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !trimmed.isEmpty else { return }
-        request.setValue("Bearer \(trimmed)", forHTTPHeaderField: "Authorization")
-    }
-
-    /// One-shot text generation for the popover summary (uses `/api/generate`, not streaming).
-    /// Tries a merged prompt first (no separate `system` field); retries with `system` if that fails.
     func generateText(
         baseURLString: String,
         model: String,
         prompt: String,
         system: String? = nil,
-        apiKey: String? = nil,
         maxTokens: Int = 64
     ) async -> Result<String, OllamaGenerateError> {
         let trimmedSystem = system?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -107,7 +94,6 @@ final class OllamaService: @unchecked Sendable {
                 model: model,
                 prompt: mergedPrompt,
                 system: nil,
-                apiKey: apiKey,
                 maxTokens: maxTokens
             )
             if case .success = merged { return merged }
@@ -116,7 +102,6 @@ final class OllamaService: @unchecked Sendable {
                 model: model,
                 prompt: prompt,
                 system: trimmedSystem,
-                apiKey: apiKey,
                 maxTokens: maxTokens
             )
         }
@@ -125,7 +110,6 @@ final class OllamaService: @unchecked Sendable {
             model: model,
             prompt: prompt,
             system: nil,
-            apiKey: apiKey,
             maxTokens: maxTokens
         )
     }
@@ -135,7 +119,6 @@ final class OllamaService: @unchecked Sendable {
         model: String,
         prompt: String,
         system: String?,
-        apiKey: String?,
         maxTokens: Int
     ) async -> Result<String, OllamaGenerateError> {
         let base = Self.normalizedBaseURL(baseURLString)
@@ -146,7 +129,6 @@ final class OllamaService: @unchecked Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        Self.applyAuthorization(to: &request, apiKey: apiKey)
         var body: [String: Any] = [
             "model": model,
             "prompt": prompt,
@@ -180,10 +162,6 @@ final class OllamaService: @unchecked Sendable {
             }
             let trimmed = Self.extractGeneratedText(from: json)
             guard !trimmed.isEmpty else {
-                let key = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                if OllamaModelPreference.isCloudModel(model), key.isEmpty {
-                    return .failure(.network("Cloud model returned no text — add your API key under Settings → Connections."))
-                }
                 return .failure(.emptyResponse)
             }
             return .success(trimmed)
@@ -269,19 +247,11 @@ final class OllamaService: @unchecked Sendable {
 // MARK: - Summary model preference (light models first)
 
 enum OllamaModelPreference {
-    /// Ollama cloud catalog models (need an API key from ollama.com).
-    static func isCloudModel(_ name: String) -> Bool {
-        let lower = name.lowercased()
-        return lower.contains(":cloud") || lower.hasSuffix("-cloud") || lower.contains("remote")
-    }
-
-    /// Models that are slow, huge, or remote — poor fit for one-line menu bar summaries.
     static func isHeavyModel(_ name: String) -> Bool {
         let lower = name.lowercased()
         let heavyMarkers = [
-            "llama4", "llama-4", "scout", "cloud", "remote",
-            "70b", "72b", "80b", "90b", "405b", "108b", "235b",
-            "8x22", "8x7b", "mixtral:8x", "command-r-plus", "deepseek-r1",
+            "cloud", "remote", "70b", "72b", "80b", "90b", "405b",
+            "8x22", "mixtral:8x", "deepseek-r1", "embed",
         ]
         if heavyMarkers.contains(where: { lower.contains($0) }) { return true }
         if lower.range(of: #":([3-9]\d|[1-9]\d{2,})b"#, options: .regularExpression) != nil {
@@ -290,48 +260,36 @@ enum OllamaModelPreference {
         return false
     }
 
-    /// Higher score = better default for short summaries.
-    static func summaryScore(for name: String) -> Int {
-        if isHeavyModel(name) { return -1_000 }
-        let lower = name.lowercased()
-        let tiers: [(String, Int)] = [
-            ("gemma3:270m", 95), ("gemma3:1b", 92),
-            ("phi4", 94), ("phi3.5", 93), ("phi3", 92), ("phi:", 90), ("phi-", 90),
-            ("gemma2:2b", 90), ("gemma2:2b-", 90),
-            ("llama3.2:1b", 88), ("llama3.2:3b", 86),
-            ("qwen2.5:0.5b", 90), ("qwen2.5:1.5b", 88), ("qwen2.5:3b", 85),
-            ("qwen3:0.6b", 88), ("qwen3:1.7b", 86),
-            ("mistral-small", 78), ("mistral:7b", 72), ("mistral-7b", 72),
-            ("llama3.2", 80), ("gemma2", 75), ("gemma3", 74), ("qwen2.5", 70),
-            (":1b", 55), (":2b", 58), (":3b", 50), ("-1b", 55), ("-2b", 58), ("-3b", 50),
-            (":7b", 35), ("-7b", 35),
-        ]
-        var score = 10
-        for (needle, points) in tiers where lower.contains(needle) {
-            score = max(score, points)
-        }
-        if lower.contains("13b") || lower.contains("14b") { score -= 40 }
-        if lower.contains("32b") || lower.contains("34b") { score -= 70 }
-        if lower.contains("embed") { score -= 80 }
-        if lower.contains("reasoning") || lower.contains("-reason") { score -= 25 }
-        return score
-    }
-
     static func sortedForSummary(_ models: [OllamaModelInfo]) -> [OllamaModelInfo] {
-        models.sorted { lhs, rhs in
-            let l = summaryScore(for: lhs.name)
-            let r = summaryScore(for: rhs.name)
-            if l != r { return l > r }
-            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        models
+            .filter { !isHeavyModel($0.name) }
+            .sorted { lhs, rhs in
+                let l = lightModelRank(lhs.name)
+                let r = lightModelRank(rhs.name)
+                if l != r { return l > r }
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+    }
+
+    private static func lightModelRank(_ name: String) -> Int {
+        let lower = name.lowercased()
+        if lower.contains(":1b") || lower.contains("-1b") || lower.contains("270m") || lower.contains("0.5b") {
+            return 3
         }
+        if lower.contains(":2b") || lower.contains("-2b") || lower.contains(":3b") || lower.contains("-3b") {
+            return 2
+        }
+        if lower.contains(":7b") || lower.contains("-7b") { return 1 }
+        return 0
     }
 
-    static func bestModelName(from models: [OllamaModelInfo]) -> String? {
-        sortedForSummary(models).first?.name
-    }
-
-    static func preferredLightModel(from models: [OllamaModelInfo]) -> String? {
-        sortedForSummary(models).first { !isHeavyModel($0.name) }?.name
-            ?? bestModelName(from: models)
+    static func pickModelName(current: String, from models: [OllamaModelInfo]) -> String {
+        let sorted = sortedForSummary(models)
+        let pool = sorted.isEmpty ? models : sorted
+        guard !pool.isEmpty else { return "" }
+        let preferred = pool[0].name
+        if current.isEmpty { return preferred }
+        if !models.contains(where: { $0.name == current }) { return preferred }
+        return current
     }
 }

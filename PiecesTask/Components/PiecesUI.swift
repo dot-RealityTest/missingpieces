@@ -1,163 +1,20 @@
 import SwiftUI
 
-// MARK: - Sheet chrome
-
-struct SheetHeader: View {
-    let title: String
-    let subtitle: String?
-    var onClose: () -> Void
-
-    init(_ title: String, subtitle: String? = nil, onClose: @escaping () -> Void) {
-        self.title = title
-        self.subtitle = subtitle
-        self.onClose = onClose
-    }
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.headline)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .keyboardShortcut(.cancelAction)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
-    }
-}
-
-struct SheetFooter: View {
-    let primaryTitle: String
-    let isPrimaryDisabled: Bool
-    var onCancel: () -> Void
-    var onPrimary: () -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Button("Cancel", action: onCancel)
-                .keyboardShortcut(.cancelAction)
-
-            Spacer()
-
-            Button(primaryTitle, action: onPrimary)
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(isPrimaryDisabled)
-        }
-        .padding(16)
-        .background(.ultraThinMaterial)
-    }
-}
-
-// MARK: - Form
-
-struct FormField<Content: View>: View {
-    let label: String
-    let icon: String?
-    @ViewBuilder var content: Content
-
-    init(_ label: String, icon: String? = nil, @ViewBuilder content: () -> Content) {
-        self.label = label
-        self.icon = icon
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label {
-                Text(label)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-            } icon: {
-                if let icon {
-                    Image(systemName: icon)
-                        .font(.caption)
-                }
-            }
-            content
-        }
-    }
-}
-
-struct FormCard<Content: View>: View {
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            content
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-        }
-    }
-}
-
 // MARK: - Pieces
 
 struct RefreshPiecesButton: View {
     let isLoading: Bool
     let isEnabled: Bool
-    var label: String = "Refresh"
-    var style: Style = .bordered
     let action: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    enum Style {
-        case bordered
-        case toolbar
-        case prominent
-    }
-
     var body: some View {
-        Group {
-            switch style {
-            case .toolbar:
-                Button(action: action) {
-                    refreshIcon
-                }
-                .popoverToolbarButtonStyle()
-                .help("Check again")
-            case .bordered:
-                Button(action: action) {
-                    Label {
-                        Text(label)
-                    } icon: {
-                        refreshIcon
-                    }
-                }
-                .buttonStyle(.bordered)
-            case .prominent:
-                Button(action: action) {
-                    Label {
-                        Text(label)
-                    } icon: {
-                        refreshIcon
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-            }
+        Button(action: action) {
+            refreshIcon
         }
+        .popoverToolbarButtonStyle()
+        .help("Check again")
         .disabled(!isEnabled || isLoading)
     }
 
@@ -212,10 +69,11 @@ struct ConnectivityServiceCard: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(name)
                     .font(.caption)
-                    .fontWeight(.semibold)
+                    .fontWeight(.medium)
+                    .foregroundStyle(SettingsTheme.value)
                 Text(subtitle)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(SettingsTheme.secondaryLabel)
                     .lineLimit(1)
             }
 
@@ -283,6 +141,123 @@ struct ConnectivityTestResultView: View {
     }
 }
 
+// MARK: - Settings (glass theme)
+
+enum SettingsTheme {
+    static let label = Color.primary.opacity(0.52)
+    static let secondaryLabel = Color.primary.opacity(0.38)
+    static let value = Color.primary.opacity(0.62)
+}
+
+struct SettingsGlassSection<Content: View>: View {
+    var title: String?
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let title {
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.primary.opacity(0.42))
+                    .padding(.leading, 4)
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                content()
+            }
+            .popoverListPanel()
+        }
+    }
+}
+
+struct SettingsToggleRow: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            Text(title)
+                .font(.system(size: 12.5))
+                .foregroundStyle(SettingsTheme.label)
+        }
+        .toggleStyle(.switch)
+        .controlSize(.small)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+    }
+}
+
+struct SettingsPickerRow<SelectionValue: Hashable, Content: View>: View {
+    let title: String
+    @Binding var selection: SelectionValue
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12.5))
+                .foregroundStyle(SettingsTheme.label)
+            Spacer(minLength: 8)
+            Picker("", selection: $selection, content: content)
+                .labelsHidden()
+                .frame(maxWidth: 180)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+    }
+}
+
+struct SettingsLabeledRow<Trailing: View>: View {
+    let title: String
+    @ViewBuilder var trailing: () -> Trailing
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12.5))
+                .foregroundStyle(SettingsTheme.label)
+            Spacer(minLength: 8)
+            trailing()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+    }
+}
+
+struct SettingsActionRow: View {
+    let title: String
+    var systemImage: String? = nil
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.caption)
+                }
+                Text(title)
+                    .font(.system(size: 12.5))
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(SettingsTheme.label)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+    }
+}
+
+struct SettingsSectionDivider: View {
+    var body: some View {
+        PopoverGlassStyle.sectionDivider
+            .frame(height: 0.5)
+            .padding(.leading, 10)
+    }
+}
+
 struct SettingsTestButton: View {
     let title: String
     let isRunning: Bool
@@ -292,17 +267,44 @@ struct SettingsTestButton: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.caption)
                 Text(title)
+                    .font(.caption)
                 Spacer(minLength: 0)
                 if isRunning {
                     ProgressView()
                         .controlSize(.mini)
                 }
             }
-            .font(.caption)
+            .foregroundStyle(SettingsTheme.label)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.primary.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+        .buttonStyle(.plain)
         .disabled(isRunning)
+    }
+}
+
+// MARK: - Popover section accents
+
+/// Soft pastel tints for grouped follow-up sections (headers + row icons).
+enum SectionAccentPalette {
+    static let pastels: [Color] = [
+        Color(red: 0.50, green: 0.64, blue: 0.88), // periwinkle
+        Color(red: 0.64, green: 0.56, blue: 0.86), // lilac
+        Color(red: 0.46, green: 0.74, blue: 0.74), // seafoam
+        Color(red: 0.90, green: 0.64, blue: 0.58), // peach
+        Color(red: 0.54, green: 0.76, blue: 0.60), // sage
+        Color(red: 0.88, green: 0.60, blue: 0.70), // rose
+        Color(red: 0.90, green: 0.76, blue: 0.50), // butter
+        Color(red: 0.56, green: 0.60, blue: 0.84), // dusty indigo
+    ]
+
+    static func color(sectionIndex: Int) -> Color {
+        guard !pastels.isEmpty else { return .secondary }
+        let index = ((sectionIndex % pastels.count) + pastels.count) % pastels.count
+        return pastels[index]
     }
 }

@@ -27,15 +27,14 @@ enum PopoverLayout {
 @main
 struct PiecesTaskApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    private let model = AppModel.shared
 
     var body: some Scene {
         MenuBarExtra {
             RootPopoverView()
-                .environment(model.appState)
-                .environment(model.appSettings)
+                .environment(AppState.shared)
+                .environment(AppSettings.shared)
         } label: {
-            MenuBarExtraLabel(appState: model.appState)
+            MenuBarExtraLabel(appState: AppState.shared)
         }
         .menuBarExtraStyle(.window)
         .commands {

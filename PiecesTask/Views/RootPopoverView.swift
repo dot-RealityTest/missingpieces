@@ -40,15 +40,27 @@ struct RootPopoverView: View {
     private var topChrome: some View {
         VStack(spacing: 0) {
             headerBar
+            if let undo = appState.undoOffer {
+                PopoverUndoBanner(message: undo.message) {
+                    Task { await appState.performUndo() }
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
             if let error = appState.lastPiecesError, appState.hasProblemItems {
                 issueBanner(error, icon: "exclamationmark.triangle")
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
             if showsSummaryPanel {
                 FollowUpSummaryPanel(
-                    summary: appState.ollamaSummary,
+                    brief: appState.ollamaSummaryBrief,
+                    followUpTitles: appState.summaryFollowUpTitles,
+                    isExpanded: appState.isOllamaSummaryExpanded,
+                    isExpandable: appState.ollamaSummaryIsExpandable,
                     error: appState.ollamaSummaryError,
                     isLoading: appState.isGeneratingOllamaSummary,
+                    onToggleExpand: {
+                        appState.toggleOllamaSummaryExpanded()
+                    },
                     onDismiss: {
                         appState.clearOllamaSummary()
                     }
@@ -58,11 +70,12 @@ struct RootPopoverView: View {
         }
         .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.gentle), value: showsSummaryPanel)
         .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.gentle), value: appState.hasProblemItems)
+        .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.gentle), value: appState.undoOffer)
     }
 
     private var showsSummaryPanel: Bool {
         appState.isGeneratingOllamaSummary
-            || appState.ollamaSummary != nil
+            || appState.ollamaSummaryBrief != nil
             || appState.ollamaSummaryError != nil
     }
 
@@ -72,23 +85,14 @@ struct RootPopoverView: View {
 
     private var headerBar: some View {
         HStack(alignment: .center, spacing: 8) {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: headerIcon)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(headerIconColor)
-                    .symbolRenderingMode(.hierarchical)
-                    .contentTransition(.symbolEffect(.replace))
-                    .animation(PopoverMotion.animation(reduceMotion: reduceMotion, PopoverMotion.gentle), value: headerIcon)
-                    .frame(width: 22, height: 22)
-
-                PiecesConnectionDot(
-                    isConnected: appState.isPiecesConnected,
-                    hasProblem: appState.hasProblemItems,
-                    hasFollowUps: appState.attentionCount > 0,
-                    size: 6
-                )
-                .offset(x: 2, y: -1)
-            }
+            AppStatusGlyphView(
+                isPiecesConnected: appState.isPiecesConnected,
+                attentionCount: appState.attentionCount,
+                hasProblemItems: appState.hasProblemItems,
+                glyphSize: 22,
+                dotSize: 6.5,
+                dotOffset: CGSize(width: 2, height: -1)
+            )
             .frame(width: 24, height: 24)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -118,6 +122,18 @@ struct RootPopoverView: View {
 
     private var headerToolbar: some View {
         HStack(spacing: 0) {
+            if appState.attentionCount > 0, appState.hasNextStepsOnly {
+                Button {
+                    _ = appState.copyAllVisibleFollowUpsToPasteboard()
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.secondary)
+                }
+                .popoverToolbarButtonStyle()
+                .help("Copy all visible follow-ups")
+            }
+
             if canSummarizeWithOllama {
                 Button {
                     Task { await appState.summarizeFollowUps() }
@@ -135,10 +151,8 @@ struct RootPopoverView: View {
             RefreshPiecesButton(
                 isLoading: appState.isLoading,
                 isEnabled: true,
-                style: .toolbar,
                 action: recheck
             )
-            .help("Check again")
 
             Button {
                 SettingsWindowPresenter.shared.open()
@@ -149,17 +163,6 @@ struct RootPopoverView: View {
             .popoverToolbarButtonStyle()
             .help("Settings (⌘,)")
         }
-    }
-
-    private var headerIcon: String {
-        appState.hasProblemItems ? "exclamationmark.triangle.fill" : "puzzlepiece.fill"
-    }
-
-    private var headerIconColor: Color {
-        if appState.hasProblemItems { return .orange }
-        if appState.hasNextStepsOnly { return .blue }
-        if appState.isPiecesConnected { return .green }
-        return .secondary
     }
 
     private var headerSubtitle: String {
@@ -212,8 +215,8 @@ struct RootPopoverView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(appState.attentionSections) { section in
-                            sectionView(section)
+                        ForEach(Array(appState.attentionSections.enumerated()), id: \.element.id) { index, section in
+                            sectionView(section, accent: SectionAccentPalette.color(sectionIndex: index))
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -231,12 +234,14 @@ struct RootPopoverView: View {
     }
 
     @ViewBuilder
-    private func sectionView(_ section: AttentionSection) -> some View {
-        if !section.sessionName.isEmpty, section.items.allSatisfy({ $0.reason == .nextStep }) {
+    private func sectionView(_ section: AttentionSection, accent: Color) -> some View {
+        let usesAccent = section.items.allSatisfy { $0.reason == .nextStep }
+
+        if !section.sessionName.isEmpty, usesAccent {
             Text(section.sessionName)
                 .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
+                .fontWeight(.medium)
+                .foregroundStyle(Color.primary.opacity(0.42))
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, PopoverGlassStyle.chromeHorizontalPadding)
@@ -248,7 +253,16 @@ struct RootPopoverView: View {
             MissingRowView(
                 item: item,
                 showsSessionName: section.sessionName.isEmpty,
-                onHide: item.reason == .nextStep ? { appState.dismissFollowUp(id: item.id) } : nil
+                onHide: item.reason == .nextStep
+                    ? {
+                        appState.dismissFollowUp(
+                            id: item.id,
+                            title: item.title,
+                            sessionName: item.detail ?? section.sessionName
+                        )
+                    }
+                    : nil,
+                sectionAccent: item.reason == .nextStep ? accent : nil
             )
             .transition(
                 .asymmetric(

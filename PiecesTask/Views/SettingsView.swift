@@ -1,94 +1,150 @@
 import SwiftUI
-import UserNotifications
 
 private enum SettingsLayout {
     static let width: CGFloat = 560
-    static let height: CGFloat = 460
-    /// Content below the tab bar.
-    static let contentHeight: CGFloat = 388
+    static let height: CGFloat = 512
+}
+
+private enum SettingsTab: String, CaseIterable, Identifiable {
+    case general
+    case connections
+    case pieces
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: return "General"
+        case .connections: return "Connections"
+        case .pieces: return "Pieces"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general: return "gear"
+        case .connections: return "network"
+        case .pieces: return "puzzlepiece.extension"
+        }
+    }
 }
 
 struct SettingsView: View {
     @Bindable var appState: AppState
     @Bindable var appSettings: AppSettings
+    var onDismiss: () -> Void
 
-    @State private var reminderAuthStatus: UNAuthorizationStatus = .notDetermined
+    @State private var selectedTab: SettingsTab = .general
+    @State private var draft = SettingsDraft(from: AppSettings.shared)
+    @State private var savedSnapshot = SettingsDraft(from: AppSettings.shared)
+    @State private var piecesTestResult: ServiceConnectivityResult?
+    @State private var ollamaTestResult: ServiceConnectivityResult?
+    @State private var isTestingPieces = false
+    @State private var isTestingOllama = false
+    @State private var ollamaModels: [OllamaModelInfo] = []
+    @State private var ollamaConnected = false
+
+    private var hasUnsavedChanges: Bool { draft != savedSnapshot }
 
     var body: some View {
         VStack(spacing: 0) {
             settingsHero
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
                 .overlay(alignment: .bottom) {
                     PopoverGlassStyle.sectionDivider
                         .frame(height: 0.5)
                         .padding(.horizontal, 12)
                 }
 
-            TabView {
-                generalTab
-                    .tabItem { Label("General", systemImage: "gear") }
-                connectionsTab
-                    .tabItem { Label("Connections", systemImage: "network") }
-                piecesTab
-                    .tabItem { Label("Pieces", systemImage: "puzzlepiece.extension") }
-            }
-            .frame(height: SettingsLayout.contentHeight)
+            tabBar
+
+            tabContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            settingsFooter
+                .overlay(alignment: .top) {
+                    PopoverGlassStyle.sectionDivider
+                        .frame(height: 0.5)
+                }
         }
         .frame(width: SettingsLayout.width, height: SettingsLayout.height)
+        .popoverGlassContentGroup()
+        .settingsGlassChrome()
+        .background(PopoverWindowConfigurator())
         .controlSize(.small)
         .onAppear {
+            reloadDraftFromSaved()
             appSettings.syncLaunchAtLoginFromSystem()
-            Task { await refreshReminderAuth() }
+            reloadDraftFromSaved()
+        }
+    }
+
+    // MARK: - Tabs
+
+    private var tabBar: some View {
+        Picker("Section", selection: $selectedTab) {
+            ForEach(SettingsTab.allCases) { tab in
+                Label(tab.title, systemImage: tab.systemImage)
+                    .tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
+    }
+
+    @ViewBuilder
+    private var tabContent: some View {
+        switch selectedTab {
+        case .general:
+            generalTab
+        case .connections:
+            connectionsTab
+        case .pieces:
+            piecesTab
         }
     }
 
     // MARK: - General
 
     private var generalTab: some View {
-        Form {
-            Section {
-                Toggle("Launch at login", isOn: launchAtLoginBinding)
-                Toggle("Check Pieces when I open the list", isOn: refreshOnOpenBinding)
-            }
-
-            Section("Reminders") {
-                Picker("Summary", selection: reminderScheduleBinding) {
-                    ForEach(SummaryReminderSchedule.allCases) { schedule in
-                        Text(schedule.label).tag(schedule)
-                    }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                SettingsGlassSection {
+                    SettingsToggleRow(title: "Launch at login", isOn: launchAtLoginBinding)
+                    SettingsSectionDivider()
+                    SettingsToggleRow(
+                        title: "Check Pieces when I open the list",
+                        isOn: refreshOnOpenBinding
+                    )
+                    SettingsSectionDivider()
+                    SettingsToggleRow(
+                        title: "Global shortcut (\(GlobalHotKeyService.shortcutLabel))",
+                        isOn: globalShortcutBinding
+                    )
                 }
 
-                Toggle("Quick win nudges", isOn: quickWinRemindersBinding)
-
-                if appSettings.summaryRemindersEnabled || appSettings.quickWinRemindersEnabled {
-                    LabeledContent("Notifications") {
-                        Text(reminderAuthLabel)
-                            .foregroundStyle(reminderAuthColor)
-                    }
-                    if reminderAuthStatus == .denied {
-                        Button("Open Notification Settings…") {
-                            SummaryNotificationService.shared.openNotificationSettings()
+                if appSettings.dismissedFollowUpCount > 0 {
+                    SettingsGlassSection {
+                        SettingsLabeledRow(title: "Hidden") {
+                            Text("\(appSettings.dismissedFollowUpCount)")
+                                .font(.caption)
+                                .foregroundStyle(SettingsTheme.secondaryLabel)
+                        }
+                        SettingsSectionDivider()
+                        SettingsActionRow(
+                            title: "Show hidden follow-ups again",
+                            systemImage: "eye"
+                        ) {
+                            Task { await appState.restoreDismissedFollowUps() }
                         }
                     }
                 }
             }
-
-            if appSettings.dismissedFollowUpCount > 0 {
-                Section {
-                    LabeledContent("Hidden") {
-                        Text("\(appSettings.dismissedFollowUpCount)")
-                            .foregroundStyle(.secondary)
-                    }
-                    Button("Show hidden follow-ups again") {
-                        Task { await appState.restoreDismissedFollowUps() }
-                    }
-                }
-            }
+            .padding(12)
         }
-        .formStyle(.grouped)
-        .scrollDisabled(true)
+        .scrollIndicators(.hidden)
     }
 
     // MARK: - Connections
@@ -100,59 +156,54 @@ struct SettingsView: View {
                 systemImage: "puzzlepiece.extension",
                 isConnected: appState.isPiecesConnected,
                 subtitle: piecesConnectionSubtitle,
-                isTesting: appState.isTestingPiecesConnectivity,
-                testResult: appState.piecesConnectivityTest
+                isTesting: isTestingPieces,
+                testResult: piecesTestResult
             ) {
-                Task { await appState.testPiecesConnectivity() }
+                Task { await testPiecesConnection() }
             }
 
             connectionPanel(
                 name: "Ollama",
                 systemImage: "cpu",
-                isConnected: appState.isOllamaConnected,
+                isConnected: ollamaConnected,
                 subtitle: ollamaConnectionSubtitle,
-                isTesting: appState.isTestingOllamaConnectivity,
-                testResult: appState.ollamaConnectivityTest
+                isTesting: isTestingOllama,
+                testResult: ollamaTestResult
             ) {
-                Task { await appState.testOllamaConnectivity() }
+                Task { await testOllamaConnection() }
             } extra: {
                 ollamaFields
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .scrollDisabled(true)
+        .padding(12)
     }
 
     private var ollamaFields: some View {
-        Group {
-            TextField("URL", text: ollamaBaseURLBinding)
-            SecureField("Cloud key", text: ollamaCloudAPIKeyBinding)
-            if appSettings.selectedModelNeedsCloudAPIKey, !appSettings.hasOllamaCloudAPIKey {
-                Text("Key required for \(appSettings.ollamaSelectedModel)")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-                    .lineLimit(1)
-            }
-            if !appState.ollamaModels.isEmpty {
-                Picker("Model", selection: ollamaModelBinding) {
-                    if !appSettings.ollamaSelectedModel.isEmpty,
-                       !appState.ollamaModels.contains(where: { $0.name == appSettings.ollamaSelectedModel }) {
-                        Text(appSettings.ollamaSelectedModel).tag(appSettings.ollamaSelectedModel)
+        VStack(alignment: .leading, spacing: 8) {
+            settingsTextField("URL", text: ollamaBaseURLBinding)
+            if !ollamaModels.isEmpty {
+                SettingsPickerRow(title: "Model", selection: ollamaModelBinding) {
+                    if !draft.ollamaSelectedModel.isEmpty,
+                       !ollamaModels.contains(where: { $0.name == draft.ollamaSelectedModel }) {
+                        Text(draft.ollamaSelectedModel).tag(draft.ollamaSelectedModel)
                     }
-                    ForEach(appState.ollamaModels) { model in
+                    ForEach(ollamaModels) { model in
                         Text(model.name).tag(model.name)
                     }
                 }
-                .onAppear {
-                    if appSettings.ollamaSelectedModel.isEmpty {
-                        appSettings.pickOllamaModel(from: appState.ollamaModels)
-                    }
-                }
             }
-            Link("ollama.com/settings/keys", destination: URL(string: "https://ollama.com/settings/keys")!)
-                .font(.caption2)
         }
+    }
+
+    private func settingsTextField(_ placeholder: String, text: Binding<String>) -> some View {
+        TextField(placeholder, text: text)
+            .textFieldStyle(.plain)
+            .font(.caption)
+            .foregroundStyle(SettingsTheme.value)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.primary.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 
     private func connectionPanel<Extra: View>(
@@ -175,66 +226,77 @@ struct SettingsView: View {
 
             extra()
 
-            SettingsTestButton(title: "Test", isRunning: isTesting, action: test)
+            SettingsTestButton(title: "Test connection", isRunning: isTesting, action: test)
 
             ConnectivityTestResultView(result: testResult, compact: true)
         }
         .padding(10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.primary.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
-        }
+        .popoverListPanel()
     }
 
     // MARK: - Pieces
 
     private var piecesTab: some View {
-        Form {
-            Section {
-                Picker("Lookback", selection: lookbackBinding) {
-                    Text("3 days").tag(3)
-                    Text("1 week").tag(7)
-                    Text("2 weeks").tag(14)
-                }
-                Picker("List size", selection: visibleLimitBinding) {
-                    ForEach(AppSettings.visibleLimitOptions, id: \.self) { n in
-                        Text("\(n)").tag(n)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                SettingsGlassSection {
+                    SettingsPickerRow(title: "Lookback", selection: lookbackBinding) {
+                        Text("3 days").tag(3)
+                        Text("1 week").tag(7)
+                        Text("2 weeks").tag(14)
                     }
-                }
-                Picker("Steps / session", selection: stepsPerSessionBinding) {
-                    ForEach(AppSettings.stepsPerSessionOptions, id: \.self) { n in
-                        Text("\(n)").tag(n)
+                    SettingsSectionDivider()
+                    SettingsPickerRow(title: "List size", selection: visibleLimitBinding) {
+                        ForEach(AppSettings.visibleLimitOptions, id: \.self) { n in
+                            Text("\(n)").tag(n)
+                        }
                     }
-                }
-            }
-
-            Section {
-                Button {
-                    Task { await appState.refreshMissingFromPieces() }
-                } label: {
-                    HStack(spacing: 8) {
-                        Label("Refresh list", systemImage: "arrow.clockwise")
-                        Spacer(minLength: 0)
-                        if appState.isLoading {
-                            ProgressView().controlSize(.mini)
+                    SettingsSectionDivider()
+                    SettingsPickerRow(title: "Steps / session", selection: stepsPerSessionBinding) {
+                        ForEach(AppSettings.stepsPerSessionOptions, id: \.self) { n in
+                            Text("\(n)").tag(n)
                         }
                     }
                 }
-                .disabled(appState.isLoading)
 
-                if !piecesStatusLine.isEmpty {
-                    Text(piecesStatusLine)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                SettingsGlassSection {
+                    Button {
+                        Task { await appState.refreshMissingFromPieces() }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.caption)
+                            Text("Refresh list")
+                                .font(.system(size: 12.5))
+                            Spacer(minLength: 0)
+                            if appState.isLoading {
+                                ProgressView()
+                                    .controlSize(.mini)
+                            }
+                        }
+                        .foregroundStyle(SettingsTheme.label)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(appState.isLoading)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+
+                    if !piecesStatusLine.isEmpty {
+                        SettingsSectionDivider()
+                        Text(piecesStatusLine)
+                            .font(.caption2)
+                            .foregroundStyle(SettingsTheme.secondaryLabel)
+                            .lineLimit(3)
+                            .padding(.horizontal, 10)
+                            .padding(.bottom, 8)
+                    }
                 }
             }
+            .padding(12)
         }
-        .formStyle(.grouped)
-        .scrollDisabled(true)
+        .scrollIndicators(.hidden)
     }
 
     // MARK: - Components
@@ -242,19 +304,59 @@ struct SettingsView: View {
     private var settingsHero: some View {
         HStack(spacing: 10) {
             Image(systemName: "puzzlepiece.fill")
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.blue)
                 .symbolRenderingMode(.hierarchical)
+                .frame(width: 22, height: 22)
 
-            Text("PiecesTask")
-                .font(.headline)
-
-            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Settings")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.primary.opacity(0.72))
+                Text("PiecesTask")
+                    .font(.caption2)
+                    .foregroundStyle(Color.primary.opacity(0.38))
+            }
 
             Text(appVersion)
                 .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Color.primary.opacity(0.32))
+
+            Button(action: cancelAndClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .popoverToolbarButtonStyle()
+            .help("Close")
+            .keyboardShortcut(.cancelAction)
         }
+        .padding(.horizontal, PopoverGlassStyle.chromeHorizontalPadding + 6)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
+    }
+
+    private var settingsFooter: some View {
+        HStack(spacing: 10) {
+            Button("Cancel", action: cancelAndClose)
+                .keyboardShortcut(.cancelAction)
+
+            Spacer(minLength: 0)
+
+            Button("Apply") {
+                Task { await applyChanges(closeAfter: false) }
+            }
+            .disabled(!hasUnsavedChanges)
+
+            Button("Save") {
+                Task { await applyChanges(closeAfter: true) }
+            }
+            .keyboardShortcut(.defaultAction)
+            .disabled(!hasUnsavedChanges)
+        }
+        .font(.system(size: 12.5))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 
     private var piecesStatusLine: String {
@@ -280,9 +382,9 @@ struct SettingsView: View {
     }
 
     private var ollamaConnectionSubtitle: String {
-        if appState.isOllamaConnected {
-            if appSettings.ollamaSelectedModel.isEmpty { return "Pick a model" }
-            return appSettings.ollamaSelectedModel
+        if ollamaConnected {
+            if draft.ollamaSelectedModel.isEmpty { return "Pick a model" }
+            return draft.ollamaSelectedModel
         }
         return "Not running"
     }
@@ -296,95 +398,87 @@ struct SettingsView: View {
     // MARK: - Bindings
 
     private var launchAtLoginBinding: Binding<Bool> {
-        Binding(get: { appSettings.launchAtLogin }, set: { appSettings.launchAtLogin = $0 })
+        Binding(get: { draft.launchAtLogin }, set: { draft.launchAtLogin = $0 })
     }
 
     private var refreshOnOpenBinding: Binding<Bool> {
-        Binding(get: { appSettings.refreshOnPopoverOpen }, set: { appSettings.refreshOnPopoverOpen = $0 })
+        Binding(get: { draft.refreshOnPopoverOpen }, set: { draft.refreshOnPopoverOpen = $0 })
+    }
+
+    private var globalShortcutBinding: Binding<Bool> {
+        Binding(get: { draft.globalShortcutEnabled }, set: { draft.globalShortcutEnabled = $0 })
     }
 
     private var ollamaBaseURLBinding: Binding<String> {
-        Binding(get: { appSettings.ollamaBaseURL }, set: { appSettings.ollamaBaseURL = $0 })
+        Binding(get: { draft.ollamaBaseURL }, set: { draft.ollamaBaseURL = $0 })
     }
 
     private var ollamaModelBinding: Binding<String> {
-        Binding(get: { appSettings.ollamaSelectedModel }, set: { appSettings.ollamaSelectedModel = $0 })
-    }
-
-    private var ollamaCloudAPIKeyBinding: Binding<String> {
-        Binding(get: { appSettings.ollamaCloudAPIKey }, set: { appSettings.ollamaCloudAPIKey = $0 })
+        Binding(get: { draft.ollamaSelectedModel }, set: { draft.ollamaSelectedModel = $0 })
     }
 
     private var lookbackBinding: Binding<Int> {
-        Binding(
-            get: { appSettings.lookbackDays },
-            set: { appSettings.lookbackDays = $0 }
-        )
+        Binding(get: { draft.lookbackDays }, set: { draft.lookbackDays = $0 })
     }
 
     private var visibleLimitBinding: Binding<Int> {
-        Binding(
-            get: { appSettings.visibleItemLimit },
-            set: { appSettings.visibleItemLimit = $0 }
-        )
+        Binding(get: { draft.visibleItemLimit }, set: { draft.visibleItemLimit = $0 })
     }
 
     private var stepsPerSessionBinding: Binding<Int> {
-        Binding(
-            get: { appSettings.stepsPerSession },
-            set: { appSettings.stepsPerSession = $0 }
-        )
+        Binding(get: { draft.stepsPerSession }, set: { draft.stepsPerSession = $0 })
     }
 
-    private var quickWinRemindersBinding: Binding<Bool> {
-        Binding(
-            get: { appSettings.quickWinRemindersEnabled },
-            set: { new in
-                Task {
-                    _ = await QuickWinNotificationService.shared.setEnabled(new, sendSoon: new)
-                    await refreshReminderAuth()
-                }
-            }
-        )
+    private func reloadDraftFromSaved() {
+        let snapshot = SettingsDraft(from: appSettings)
+        draft = snapshot
+        savedSnapshot = snapshot
     }
 
-    private var reminderScheduleBinding: Binding<SummaryReminderSchedule> {
-        Binding(
-            get: { appSettings.summaryReminderSchedule },
-            set: { new in
-                let wasOff = appSettings.summaryReminderSchedule == .off
-                Task {
-                    _ = await SummaryNotificationService.shared.applySchedule(
-                        new,
-                        sendSoon: wasOff && new != .off
-                    )
-                    await refreshReminderAuth()
-                }
-            }
-        )
+    private func cancelAndClose() {
+        onDismiss()
     }
 
-    private var reminderAuthLabel: String {
-        switch reminderAuthStatus {
-        case .authorized: return "Allowed"
-        case .denied: return "Blocked"
-        case .notDetermined: return "Not asked"
-        case .provisional: return "Provisional"
-        case .ephemeral: return "Ephemeral"
-        @unknown default: return "Unknown"
+    private func applyChanges(closeAfter: Bool) async {
+        await draft.commit(to: appSettings, appState: appState)
+        savedSnapshot = draft
+        if closeAfter {
+            onDismiss()
         }
     }
 
-    private var reminderAuthColor: Color {
-        switch reminderAuthStatus {
-        case .authorized: return .green
-        case .denied: return .red
-        default: return .secondary
+    private func testPiecesConnection() async {
+        isTestingPieces = true
+        defer { isTestingPieces = false }
+
+        let info = await PiecesService.shared.checkConnectivity()
+        appState.isPiecesConnected = info.isAvailable
+
+        if info.isAvailable {
+            let portText = info.port.map { "Port \($0)" } ?? "Port unknown"
+            piecesTestResult = .success(
+                title: "Connected to Pieces OS",
+                detail: [info.baseURL, portText, info.message].compactMap { $0 }.joined(separator: "\n")
+            )
+        } else {
+            piecesTestResult = .failure(title: "Pieces OS is offline", detail: info.message)
         }
     }
 
-    private func refreshReminderAuth() async {
-        await SummaryNotificationService.shared.refreshAuthorizationStatus()
-        reminderAuthStatus = SummaryNotificationService.shared.authorizationStatus
+    private func testOllamaConnection() async {
+        isTestingOllama = true
+        defer { isTestingOllama = false }
+
+        let outcome = await OllamaService.shared.checkConnectivity(baseURLString: draft.ollamaBaseURL)
+        ollamaTestResult = outcome.result
+        ollamaModels = outcome.models
+        ollamaConnected = outcome.result.isConnected
+
+        if outcome.result.isConnected {
+            draft.ollamaSelectedModel = OllamaModelPreference.pickModelName(
+                current: draft.ollamaSelectedModel,
+                from: outcome.models
+            )
+        }
     }
 }

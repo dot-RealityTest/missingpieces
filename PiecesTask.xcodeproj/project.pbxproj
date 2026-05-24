@@ -22,16 +22,22 @@
 			path = "PiecesTask/Models/FollowUpItemID.swift";
 			sourceTree = SOURCE_ROOT;
 		};
+		FA7C9E5956C32177284CCD45 /* FollowUpUndoOffer.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = "PiecesTask/Models/FollowUpUndoOffer.swift";
+			sourceTree = SOURCE_ROOT;
+		};
 		A75A08F6A1CDB0BDAD2DDB27 /* ServiceConnectivity.swift */ = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
 			path = "PiecesTask/Models/ServiceConnectivity.swift";
 			sourceTree = SOURCE_ROOT;
 		};
-		28AB4E405449470A93379CA9 /* SummaryReminderSchedule.swift */ = {
+		8C19872D791915CD45265938 /* SettingsDraft.swift */ = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
-			path = "PiecesTask/Models/SummaryReminderSchedule.swift";
+			path = "PiecesTask/Models/SettingsDraft.swift";
 			sourceTree = SOURCE_ROOT;
 		};
 		723705B52B2DFD05ADA58290 /* FollowUpSummaryPanel.swift */ = {
@@ -82,6 +88,12 @@
 			path = "PiecesTask/Components/PopoverMotion.swift";
 			sourceTree = SOURCE_ROOT;
 		};
+		063D80D248D7CABEAB34918E /* PopoverUndoBanner.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = "PiecesTask/Components/PopoverUndoBanner.swift";
+			sourceTree = SOURCE_ROOT;
+		};
 		2049C339E79BF172226A66B6 /* RootPopoverView.swift */ = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
@@ -100,12 +112,6 @@
 			path = "PiecesTask/Services/AppDelegate.swift";
 			sourceTree = SOURCE_ROOT;
 		};
-		853E3C7DB4417491A9962D11 /* AppModel.swift */ = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = "PiecesTask/Services/AppModel.swift";
-			sourceTree = SOURCE_ROOT;
-		};
 		B8622BE206A045CED3DAF6D6 /* AppSettings.swift */ = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
@@ -118,16 +124,16 @@
 			path = "PiecesTask/Services/AppState.swift";
 			sourceTree = SOURCE_ROOT;
 		};
+		DA3BACE8B75D1E3366AA6EFB /* GlobalHotKeyService.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = "PiecesTask/Services/GlobalHotKeyService.swift";
+			sourceTree = SOURCE_ROOT;
+		};
 		AA9032B18A46F8F59013E5BF /* LaunchAtLoginHelper.swift */ = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
 			path = "PiecesTask/Services/LaunchAtLoginHelper.swift";
-			sourceTree = SOURCE_ROOT;
-		};
-		F5B9B4A6189FAC115F35A25E /* LocalNotificationPoster.swift */ = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = "PiecesTask/Services/LocalNotificationPoster.swift";
 			sourceTree = SOURCE_ROOT;
 		};
 		341BC247C97E655FB4FFE5C6 /* MenuBarRightClickMenu.swift */ = {
@@ -160,28 +166,16 @@
 			path = "PiecesTask/Services/PiecesService.swift";
 			sourceTree = SOURCE_ROOT;
 		};
-		5C15F188F78CA977DB03D43B /* QuickWinNotificationService.swift */ = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = "PiecesTask/Services/QuickWinNotificationService.swift";
-			sourceTree = SOURCE_ROOT;
-		};
-		EFFE3BC5032C565EFACDE9BB /* QuickWinPicker.swift */ = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = "PiecesTask/Services/QuickWinPicker.swift";
-			sourceTree = SOURCE_ROOT;
-		};
 		C3783227C560D3A3BA43E2B6 /* SettingsWindowPresenter.swift */ = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
 			path = "PiecesTask/Services/SettingsWindowPresenter.swift";
 			sourceTree = SOURCE_ROOT;
 		};
-		49F122FE1BFF750503E91ADF /* SummaryNotificationService.swift */ = {
+		0E068260829727583A748131 /* PiecesTaskAssets.xcassets */ = {
 			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = "PiecesTask/Services/SummaryNotificationService.swift";
+			lastKnownFileType = folder.assetcatalog;
+			path = "PiecesTaskAssets.xcassets";
 			sourceTree = SOURCE_ROOT;
 		};
 		A734CCEF338A717792A212FE /* PiecesTask.app */ = {
@@ -195,11 +189,13 @@
 			isa = PBXGroup;
 			children = (
 				5BAB63C60BF318DAB40A4F04 /* Products */,
+				0E068260829727583A748131 /* PiecesTaskAssets.xcassets */,
 				54C498EE34C6891C407E5FD5 /* PiecesTaskApp.swift */,
 				021AFD7E462C0904419BDA37 /* AttentionItem.swift */,
 				E6B501FE56BA780C0841A880 /* FollowUpItemID.swift */,
+				FA7C9E5956C32177284CCD45 /* FollowUpUndoOffer.swift */,
 				A75A08F6A1CDB0BDAD2DDB27 /* ServiceConnectivity.swift */,
-				28AB4E405449470A93379CA9 /* SummaryReminderSchedule.swift */,
+				8C19872D791915CD45265938 /* SettingsDraft.swift */,
 				723705B52B2DFD05ADA58290 /* FollowUpSummaryPanel.swift */,
 				E50F99E24AD8A0736AFD8D6E /* MenuBarStatusIcon.swift */,
 				5372CAF035A1E765F380D8A7 /* MenuBarStatusLabel.swift */,
@@ -208,23 +204,20 @@
 				D6A193493849E2A59A76A0ED /* PopoverGlassBackground.swift */,
 				0B604011B3E51ECD416B84AA /* PopoverHeightReader.swift */,
 				88EBEB2C6B19E42972892607 /* PopoverMotion.swift */,
+				063D80D248D7CABEAB34918E /* PopoverUndoBanner.swift */,
 				2049C339E79BF172226A66B6 /* RootPopoverView.swift */,
 				CB53599E17230252E1C5C7D8 /* SettingsView.swift */,
 				51471E2242BF25E91AF7094B /* AppDelegate.swift */,
-				853E3C7DB4417491A9962D11 /* AppModel.swift */,
 				B8622BE206A045CED3DAF6D6 /* AppSettings.swift */,
 				7D4BA79388C40E5C331BD9A4 /* AppState.swift */,
+				DA3BACE8B75D1E3366AA6EFB /* GlobalHotKeyService.swift */,
 				AA9032B18A46F8F59013E5BF /* LaunchAtLoginHelper.swift */,
-				F5B9B4A6189FAC115F35A25E /* LocalNotificationPoster.swift */,
 				341BC247C97E655FB4FFE5C6 /* MenuBarRightClickMenu.swift */,
 				EE86AC2A292105C334A8EDB1 /* MenuBarStatusItemFinder.swift */,
 				E71B6A0E12B551FA3FA01117 /* OllamaService.swift */,
 				F05FDB9B7C24ED9804748DB9 /* PiecesNextStepsParser.swift */,
 				C3A51897183EDEFE2CAB4B40 /* PiecesService.swift */,
-				5C15F188F78CA977DB03D43B /* QuickWinNotificationService.swift */,
-				EFFE3BC5032C565EFACDE9BB /* QuickWinPicker.swift */,
 				C3783227C560D3A3BA43E2B6 /* SettingsWindowPresenter.swift */,
-				49F122FE1BFF750503E91ADF /* SummaryNotificationService.swift */,
 			);
 			sourceTree = SOURCE_ROOT;
 		};
@@ -248,13 +241,17 @@
 			isa = PBXBuildFile;
 			fileRef = E6B501FE56BA780C0841A880;
 		};
+		DC662B90193B90B4CB398FC2 /* FollowUpUndoOffer.swift in Sources */ = {
+			isa = PBXBuildFile;
+			fileRef = FA7C9E5956C32177284CCD45;
+		};
 		CFF821E71DA878E0A0B76158 /* ServiceConnectivity.swift in Sources */ = {
 			isa = PBXBuildFile;
 			fileRef = A75A08F6A1CDB0BDAD2DDB27;
 		};
-		891F7B28FBD07D3C89D84D67 /* SummaryReminderSchedule.swift in Sources */ = {
+		70493D4F84D3B1297B76C3DD /* SettingsDraft.swift in Sources */ = {
 			isa = PBXBuildFile;
-			fileRef = 28AB4E405449470A93379CA9;
+			fileRef = 8C19872D791915CD45265938;
 		};
 		5D7D9A73308CDED3FD3173FD /* FollowUpSummaryPanel.swift in Sources */ = {
 			isa = PBXBuildFile;
@@ -288,6 +285,10 @@
 			isa = PBXBuildFile;
 			fileRef = 88EBEB2C6B19E42972892607;
 		};
+		533C54C97D99AC83F46FEA32 /* PopoverUndoBanner.swift in Sources */ = {
+			isa = PBXBuildFile;
+			fileRef = 063D80D248D7CABEAB34918E;
+		};
 		468B0F8EC01654A0E3159A4B /* RootPopoverView.swift in Sources */ = {
 			isa = PBXBuildFile;
 			fileRef = 2049C339E79BF172226A66B6;
@@ -300,10 +301,6 @@
 			isa = PBXBuildFile;
 			fileRef = 51471E2242BF25E91AF7094B;
 		};
-		8862AB09B364351A07513FD5 /* AppModel.swift in Sources */ = {
-			isa = PBXBuildFile;
-			fileRef = 853E3C7DB4417491A9962D11;
-		};
 		6D96E22A050A5275FFCD33C4 /* AppSettings.swift in Sources */ = {
 			isa = PBXBuildFile;
 			fileRef = B8622BE206A045CED3DAF6D6;
@@ -312,13 +309,13 @@
 			isa = PBXBuildFile;
 			fileRef = 7D4BA79388C40E5C331BD9A4;
 		};
+		FFF6B0799FDAC1C636E5C7D9 /* GlobalHotKeyService.swift in Sources */ = {
+			isa = PBXBuildFile;
+			fileRef = DA3BACE8B75D1E3366AA6EFB;
+		};
 		EDA5342737317F4ADEFAB719 /* LaunchAtLoginHelper.swift in Sources */ = {
 			isa = PBXBuildFile;
 			fileRef = AA9032B18A46F8F59013E5BF;
-		};
-		4BB734A37D0169A321D6F95D /* LocalNotificationPoster.swift in Sources */ = {
-			isa = PBXBuildFile;
-			fileRef = F5B9B4A6189FAC115F35A25E;
 		};
 		5B1A3A0DCFAF75F6F4CBD243 /* MenuBarRightClickMenu.swift in Sources */ = {
 			isa = PBXBuildFile;
@@ -340,27 +337,20 @@
 			isa = PBXBuildFile;
 			fileRef = C3A51897183EDEFE2CAB4B40;
 		};
-		47C5FEEE8B487894C1A311E9 /* QuickWinNotificationService.swift in Sources */ = {
-			isa = PBXBuildFile;
-			fileRef = 5C15F188F78CA977DB03D43B;
-		};
-		1988910160D6BF548FF42418 /* QuickWinPicker.swift in Sources */ = {
-			isa = PBXBuildFile;
-			fileRef = EFFE3BC5032C565EFACDE9BB;
-		};
 		C863C7F93009DBA8E9654462 /* SettingsWindowPresenter.swift in Sources */ = {
 			isa = PBXBuildFile;
 			fileRef = C3783227C560D3A3BA43E2B6;
 		};
-		EC1E9A7DBBD6AAB695B7EFCD /* SummaryNotificationService.swift in Sources */ = {
+		4C5C8C81FB81F8595D189578 /* PiecesTaskAssets.xcassets in Resources */ = {
 			isa = PBXBuildFile;
-			fileRef = 49F122FE1BFF750503E91ADF;
+			fileRef = 0E068260829727583A748131;
 		};
 		9E440566B19C12EF065B2306 = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6CE969E4282D97D68D1426C9;
 			buildPhases = (
 				25C0F6508062A578DA9C6120,
+				4F0E9CC917A96D222D322AB3,
 			);
 			buildRules = (
 			);
@@ -378,8 +368,9 @@
 				515196D777AF8F92E89E1B1F,
 				F3D192FF9A2E1BDCDE694E78,
 				A1C0B307B5618642E9A88A8A,
+				DC662B90193B90B4CB398FC2,
 				CFF821E71DA878E0A0B76158,
-				891F7B28FBD07D3C89D84D67,
+				70493D4F84D3B1297B76C3DD,
 				5D7D9A73308CDED3FD3173FD,
 				3C882F2A91F2FEBDED91514A,
 				30BA49A2098ABBD4FCEC5993,
@@ -388,23 +379,27 @@
 				B2C80D9C8095BDE2101215F0,
 				93DCD40B97F40A4D3A8E5B24,
 				70AD4157296C0BE432BEF6BA,
+				533C54C97D99AC83F46FEA32,
 				468B0F8EC01654A0E3159A4B,
 				2DFD7D442E0E72F2E6C7AB71,
 				4CB56A49F1D2D25E7156AD51,
-				8862AB09B364351A07513FD5,
 				6D96E22A050A5275FFCD33C4,
 				19F166A774BB71F740727F31,
+				FFF6B0799FDAC1C636E5C7D9,
 				EDA5342737317F4ADEFAB719,
-				4BB734A37D0169A321D6F95D,
 				5B1A3A0DCFAF75F6F4CBD243,
 				153F7FC0228F6EEAB179FC2B,
 				638CD10240F9C9E34E955387,
 				9EAF47A93B8A768B95CEEFFE,
 				A86A23F2FC7A8C9B81822122,
-				47C5FEEE8B487894C1A311E9,
-				1988910160D6BF548FF42418,
 				C863C7F93009DBA8E9654462,
-				EC1E9A7DBBD6AAB695B7EFCD,
+			);
+		};
+		4F0E9CC917A96D222D322AB3 = {
+			isa = PBXResourcesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+			files = (
+				4C5C8C81FB81F8595D189578,
 			);
 		};
 		6CE969E4282D97D68D1426C9 = {
