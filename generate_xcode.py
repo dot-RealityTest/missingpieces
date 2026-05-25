@@ -161,7 +161,15 @@ for cid, cname in [(BCDID, "Debug"), (BCRID, "Release")]:
     L(f"\t\t\tisa = XCBuildConfiguration;")
     L(f"\t\t\tbuildSettings = {{")
     L(f"\t\t\t\tASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;")
-    L(f"\t\t\t\tCODE_SIGN_STYLE = Automatic;")
+    if cname == "Release":
+        L(f"\t\t\t\tCODE_SIGN_ENTITLEMENTS = \"PiecesTask/PiecesTask.entitlements\";")
+        L(f"\t\t\t\tCODE_SIGN_IDENTITY = \"Developer ID Application\";")
+        L(f"\t\t\t\tCODE_SIGN_STYLE = Manual;")
+        L(f"\t\t\t\tCURRENT_PROJECT_VERSION = 1;")
+        L(f"\t\t\t\tDEVELOPMENT_TEAM = P5RB3W3D58;")
+        L(f"\t\t\t\tENABLE_HARDENED_RUNTIME = YES;")
+    else:
+        L(f"\t\t\t\tCODE_SIGN_STYLE = Automatic;")
     L(f"\t\t\t\tCOMBINE_HIDPI_IMAGES = YES;")
     L(f"\t\t\t\tENABLE_PREVIEWS = YES;")
     L(f"\t\t\t\tINFOPLIST_FILE = \"PiecesTask/Info.plist\";")
@@ -169,6 +177,8 @@ for cid, cname in [(BCDID, "Debug"), (BCRID, "Release")]:
     L(f"\t\t\t\t\t\"$(inherited)\",")
     L(f"\t\t\t\t\t\"@executable_path/../Frameworks\",")
     L(f"\t\t\t\t);")
+    if cname == "Release":
+        L(f"\t\t\t\tMARKETING_VERSION = 1.0.0;")
     L(f"\t\t\t\tMACOSX_DEPLOYMENT_TARGET = 14.0;")
     L(f"\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = app.piecestask;")
     L(f"\t\t\t\tPRODUCT_NAME = \"$(TARGET_NAME)\";")

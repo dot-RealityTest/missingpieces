@@ -1,0 +1,11 @@
+PiecesTask — install
+
+1. Open this disk image.
+2. Drag PiecesTask.app to Applications.
+3. Open PiecesTask from Applications (menu bar puzzle-piece icon).
+4. Keep Pieces OS running on this Mac.
+
+First launch: if macOS warns the app is from an unidentified developer,
+right-click PiecesTask.app → Open → Open once.
+
+Requires macOS 14 or later.

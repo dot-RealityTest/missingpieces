@@ -10,5 +10,6 @@ xcuserdata/
 # Editor
 .cursor/
 
-# Accidental artifacts
-grep
+# Release artifacts
+release/dmg-staging/
+release/*.dmg
