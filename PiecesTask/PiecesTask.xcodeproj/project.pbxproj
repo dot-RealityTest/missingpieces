@@ -4,11 +4,11 @@
 	classes = {};
 	objectVersion = 56;
 	objects = {
-		A734CCEF338A717792A212FE /* PiecesTask.app */ = {
+		A734CCEF338A717792A212FE /* missingpieces.app */ = {
 			isa = PBXFileReference;
 			explicitFileType = wrapper.application;
 			includeInIndex = 0;
-			path = "PiecesTask.app";
+			path = "missingpieces.app";
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 		0035FE99EA2940F7FA633A58 = {
@@ -21,7 +21,7 @@
 		5BAB63C60BF318DAB40A4F04 = {
 			isa = PBXGroup;
 			children = (
-				A734CCEF338A717792A212FE /* PiecesTask.app */,
+				A734CCEF338A717792A212FE /* missingpieces.app */,
 			);
 			name = Products;
 			sourceTree = SOURCE_ROOT;
@@ -36,8 +36,8 @@
 			);
 			dependencies = (
 			);
-			name = "PiecesTask";
-			productName = "PiecesTask";
+			name = "missingpieces";
+			productName = "missingpieces";
 			productReference = A734CCEF338A717792A212FE;
 			productType = "com.apple.product-type.application";
 		};
@@ -69,7 +69,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.piecestask;
+				PRODUCT_BUNDLE_IDENTIFIER = app.missingpieces;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
 			};
@@ -88,7 +88,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.piecestask;
+				PRODUCT_BUNDLE_IDENTIFIER = app.missingpieces;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
 			};

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""Generate a valid Xcode project for PiecesTask."""
+"""Generate a valid Xcode project for missingpieces (repo: PiecesTask)."""
 import os, hashlib
+
+APP_TARGET = "missingpieces"
+BUNDLE_ID = "app.missingpieces"
 
 def xid(s):
     return hashlib.sha256(s.encode()).hexdigest()[:24].upper()
@@ -62,11 +65,11 @@ L(f"\t\t\tsourceTree = SOURCE_ROOT;")
 L(f"\t\t}};")
 
 # Product ref
-L(f"\t\t{PRID} /* PiecesTask.app */ = {{")
+L(f"\t\t{PRID} /* {APP_TARGET}.app */ = {{")
 L(f"\t\t\tisa = PBXFileReference;")
 L(f"\t\t\texplicitFileType = wrapper.application;")
 L(f"\t\t\tincludeInIndex = 0;")
-L(f"\t\t\tpath = \"PiecesTask.app\";")
+L(f"\t\t\tpath = \"{APP_TARGET}.app\";")
 L(f"\t\t\tsourceTree = BUILT_PRODUCTS_DIR;")
 L(f"\t\t}};")
 
@@ -89,7 +92,7 @@ L(f"\t\t}};")
 L(f"\t\t{PGID} = {{")
 L(f"\t\t\tisa = PBXGroup;")
 L(f"\t\t\tchildren = (")
-L(f"\t\t\t\t{PRID} /* PiecesTask.app */,")
+L(f"\t\t\t\t{PRID} /* {APP_TARGET}.app */,")
 L(f"\t\t\t);")
 L(f"\t\t\tname = Products;")
 L(f"\t\t\tsourceTree = SOURCE_ROOT;")
@@ -119,8 +122,8 @@ L(f"\t\t\tbuildRules = (")
 L(f"\t\t\t);")
 L(f"\t\t\tdependencies = (")
 L(f"\t\t\t);")
-L(f"\t\t\tname = \"PiecesTask\";")
-L(f"\t\t\tproductName = \"PiecesTask\";")
+L(f"\t\t\tname = \"{APP_TARGET}\";")
+L(f"\t\t\tproductName = \"{APP_TARGET}\";")
 L(f"\t\t\tproductReference = {PRID};")
 L(f"\t\t\tproductType = \"com.apple.product-type.application\";")
 L(f"\t\t}};")
@@ -162,10 +165,11 @@ for cid, cname in [(BCDID, "Debug"), (BCRID, "Release")]:
     L(f"\t\t\tbuildSettings = {{")
     L(f"\t\t\t\tASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;")
     if cname == "Release":
-        L(f"\t\t\t\tCODE_SIGN_ENTITLEMENTS = \"PiecesTask/PiecesTask.entitlements\";")
+        L(f"\t\t\t\tCODE_SIGN_ENTITLEMENTS = \"PiecesTask/missingpieces.entitlements\";")
         L(f"\t\t\t\tCODE_SIGN_IDENTITY = \"Developer ID Application\";")
+        L(f"\t\t\t\tCODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;")
         L(f"\t\t\t\tCODE_SIGN_STYLE = Manual;")
-        L(f"\t\t\t\tCURRENT_PROJECT_VERSION = 1;")
+        L(f"\t\t\t\tCURRENT_PROJECT_VERSION = 2;")
         L(f"\t\t\t\tDEVELOPMENT_TEAM = P5RB3W3D58;")
         L(f"\t\t\t\tENABLE_HARDENED_RUNTIME = YES;")
     else:
@@ -180,7 +184,7 @@ for cid, cname in [(BCDID, "Debug"), (BCRID, "Release")]:
     if cname == "Release":
         L(f"\t\t\t\tMARKETING_VERSION = 1.0.0;")
     L(f"\t\t\t\tMACOSX_DEPLOYMENT_TARGET = 14.0;")
-    L(f"\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = app.piecestask;")
+    L(f"\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = {BUNDLE_ID};")
     L(f"\t\t\t\tPRODUCT_NAME = \"$(TARGET_NAME)\";")
     L(f"\t\t\t\tSWIFT_VERSION = 6.0;")
     L(f"\t\t\t}};")

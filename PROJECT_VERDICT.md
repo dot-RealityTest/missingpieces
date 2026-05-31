@@ -1,4 +1,6 @@
-# PiecesTask — worth your time?
+# missingpieces — worth your time?
+
+> **Historical snapshot** — app renamed to **missingpieces**; lean `main` superseded much of this doc.
 
 > **Out of date (May 2026).** Verdict below describes an older task-app direction. Current app: read-only Pieces next-steps on `main`. See **`AGENTS.md`**.
 

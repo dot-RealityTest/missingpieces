@@ -4,20 +4,22 @@
 <dict>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>missingpieces</string>
     <key>CFBundleExecutable</key>
-    <string>PiecesTask</string>
+    <string>missingpieces</string>
     <key>CFBundleIdentifier</key>
-    <string>app.piecestask</string>
+    <string>app.missingpieces</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>PiecesTask</string>
+    <string>missingpieces</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.productivity</string>
     <key>LSMinimumSystemVersion</key>
@@ -25,7 +27,7 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSHumanReadableCopyright</key>
-    <string>Copyright © 2026 PiecesTask. All rights reserved.</string>
+    <string>Copyright © 2026 missingpieces. All rights reserved.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>

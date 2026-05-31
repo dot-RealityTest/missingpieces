@@ -1,4 +1,6 @@
-# PiecesTask — plain guide
+# missingpieces — plain guide
+
+> **Out of date in places** — lean `main` renamed the app to **missingpieces** (`app.missingpieces`). See `docs/FEATURES_AND_PIPELINE.md` and `AGENTS.md` for current build commands. Repo path is still `PiecesTask/`.
 
 > **Out of date (May 2026).** The app on `main` is a read-only Pieces next-steps list — no Ollama, no local task list. See **`AGENTS.md`** for the current product.
 
@@ -9,7 +11,7 @@
 
 ## In one minute
 
-**PiecesTask** is a small Mac **menu bar** app (top-right icons). It shows **“What you're missing”**: follow-up items pulled from **Next Steps** sections in your recent **Pieces OS** workstream summaries.
+**missingpieces** (formerly PiecesTask in docs) is a small Mac **menu bar** app (top-right icons). It shows **“What you're missing”**: follow-up items pulled from **Next Steps** sections in your recent **Pieces OS** workstream summaries.
 
 - **Read-only** — it does not add tasks to Pieces or change anything in Pieces.
 - **Local only** — hiding a row only affects this app. **Ollama** (optional) runs on your Mac for a short AI summary.
@@ -23,11 +25,11 @@
    ```
 2. Build:
    ```bash
-   xcodebuild -project PiecesTask.xcodeproj -target PiecesTask -configuration Debug build
+   xcodebuild -project PiecesTask.xcodeproj -target missingpieces -configuration Debug build
    ```
 3. Launch:
    ```bash
-   open build/Debug/PiecesTask.app
+   open build/Debug/missingpieces.app
    ```
 4. Click the **menu bar icon** (checkmark or blue list icon) to open the panel.
 5. **Pieces OS** should be running on this Mac. Settings → **Connections** → **Test Pieces connection**.
@@ -66,7 +68,7 @@
 
 | Folder / file | What it is for |
 |---------------|----------------|
-| `PiecesTask/PiecesTaskApp.swift` | Menu bar app entry, window size |
+| `PiecesTask/MissingPiecesApp.swift` | Menu bar app entry, window size |
 | `PiecesTask/Services/AppState.swift` | List state, refresh, hide, Ollama summary |
 | `PiecesTask/Services/PiecesService.swift` | HTTP client to Pieces OS (localhost) |
 | `PiecesTask/Services/OllamaService.swift` | Ollama tags + generate API |
@@ -100,7 +102,7 @@
 
 ## Things that might confuse you
 
-1. **Hiding is not deleting in Pieces** — it only skips that row in PiecesTask until you restore or the ID changes.
+1. **Hiding is not deleting in Pieces** — it only skips that row in missingpieces until you restore or the ID changes.
 2. **“Showing 8 of 10”** — the list cap in Settings; the rest are still in Pieces.
 3. **Ollama summary** — needs Ollama running, a model installed (`ollama pull …`), and a model picked in Settings. First run can take a minute.
 4. **`build/` is large** — normal after `xcodebuild`; not source code.

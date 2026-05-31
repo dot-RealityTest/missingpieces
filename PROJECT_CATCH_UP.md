@@ -1,4 +1,6 @@
-# PiecesTask — catch-up before you code
+# missingpieces — catch-up before you code
+
+> **Partially out of date** — app is now **missingpieces**; see `docs/` and `AGENTS.md`.
 
 > **Out of date (May 2026).** `main` is merged and lean. See **`AGENTS.md`** — build, open the menu bar popover, mark done / copy / expand rows.
 
@@ -14,7 +16,7 @@
 **Do these first (if any):**
 
 1. **Build and launch** (Pieces OS running):  
-   `xcodebuild -project PiecesTask.xcodeproj -target PiecesTask -configuration Debug build` → `open build/Debug/PiecesTask.app`  
+   `xcodebuild -project PiecesTask.xcodeproj -target missingpieces -configuration Debug build` → `open build/Debug/missingpieces.app`
    Settings → **Connections** → test Pieces + Ollama.
 2. **Refresh `PROJECT_GUIDE.md`** — remove to-do/SwiftData/outbound-sync wording; match “What you're missing”, glass Settings, ⌃⌥P shortcut, triage (save/snooze/hide), prompt-only Ollama brief line.
 3. **Decide on git** — one initial commit exists (2026-05-19); many local changes (glass, icons, triage, summary prompt, hotkey) are still uncommitted. Commit when the build feels right, or stash what you do not want.
@@ -36,7 +38,7 @@
 | Pieces | `PiecesService` → localhost **39300** (fallback **1000**) | Inbound only: workstream summaries → SUMMARY annotations → **Next Steps** parser |
 | Ollama | `OllamaService` | Tags + generate; **`think: false`** for brief summary |
 | Persistence | **UserDefaults** | Settings, hidden/saved/snoozed follow-up IDs |
-| Build | `xcodebuild` + `python3 generate_xcode.py` after new `.swift` files | Bundle ID `app.piecestask` |
+| Build | `xcodebuild` + `python3 generate_xcode.py` after new `.swift` files | Bundle ID `app.missingpieces` |
 | Git | **`main`**, initial commit 2026-05-19 | Large working tree since polish session |
 | Agent memory | `AGENTS.md` (project) | Pieces-first, read-only, compact glass UI |
 

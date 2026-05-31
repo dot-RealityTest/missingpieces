@@ -10,6 +10,11 @@ xcuserdata/
 # Editor
 .cursor/
 
+# Local agent/workspace scratch
+.handoff/
+.project-cleanup-backups/
+grep
+
 # Release artifacts
 release/dmg-staging/
 release/*.dmg

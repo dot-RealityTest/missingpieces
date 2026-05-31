@@ -4,10 +4,10 @@
 	classes = {};
 	objectVersion = 56;
 	objects = {
-		54C498EE34C6891C407E5FD5 /* PiecesTaskApp.swift */ = {
+		A77D30C3CFC7F3BF85065E8F /* MissingPiecesApp.swift */ = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
-			path = "PiecesTask/PiecesTaskApp.swift";
+			path = "PiecesTask/MissingPiecesApp.swift";
 			sourceTree = SOURCE_ROOT;
 		};
 		021AFD7E462C0904419BDA37 /* AttentionItem.swift */ = {
@@ -124,11 +124,11 @@
 			path = "PiecesTaskAssets.xcassets";
 			sourceTree = SOURCE_ROOT;
 		};
-		A734CCEF338A717792A212FE /* PiecesTask.app */ = {
+		A734CCEF338A717792A212FE /* missingpieces.app */ = {
 			isa = PBXFileReference;
 			explicitFileType = wrapper.application;
 			includeInIndex = 0;
-			path = "PiecesTask.app";
+			path = "missingpieces.app";
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 		0035FE99EA2940F7FA633A58 = {
@@ -136,7 +136,7 @@
 			children = (
 				5BAB63C60BF318DAB40A4F04 /* Products */,
 				0E068260829727583A748131 /* PiecesTaskAssets.xcassets */,
-				54C498EE34C6891C407E5FD5 /* PiecesTaskApp.swift */,
+				A77D30C3CFC7F3BF85065E8F /* MissingPiecesApp.swift */,
 				021AFD7E462C0904419BDA37 /* AttentionItem.swift */,
 				E6B501FE56BA780C0841A880 /* FollowUpItemID.swift */,
 				E50F99E24AD8A0736AFD8D6E /* MenuBarStatusIcon.swift */,
@@ -161,14 +161,14 @@
 		5BAB63C60BF318DAB40A4F04 = {
 			isa = PBXGroup;
 			children = (
-				A734CCEF338A717792A212FE /* PiecesTask.app */,
+				A734CCEF338A717792A212FE /* missingpieces.app */,
 			);
 			name = Products;
 			sourceTree = SOURCE_ROOT;
 		};
-		515196D777AF8F92E89E1B1F /* PiecesTaskApp.swift in Sources */ = {
+		23FDD51D6EE7B485E00D32CF /* MissingPiecesApp.swift in Sources */ = {
 			isa = PBXBuildFile;
-			fileRef = 54C498EE34C6891C407E5FD5;
+			fileRef = A77D30C3CFC7F3BF85065E8F;
 		};
 		F3D192FF9A2E1BDCDE694E78 /* AttentionItem.swift in Sources */ = {
 			isa = PBXBuildFile;
@@ -257,8 +257,8 @@
 			);
 			dependencies = (
 			);
-			name = "PiecesTask";
-			productName = "PiecesTask";
+			name = "missingpieces";
+			productName = "missingpieces";
 			productReference = A734CCEF338A717792A212FE;
 			productType = "com.apple.product-type.application";
 		};
@@ -266,7 +266,7 @@
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
 			files = (
-				515196D777AF8F92E89E1B1F,
+				23FDD51D6EE7B485E00D32CF,
 				F3D192FF9A2E1BDCDE694E78,
 				A1C0B307B5618642E9A88A8A,
 				3C882F2A91F2FEBDED91514A,
@@ -316,7 +316,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.piecestask;
+				PRODUCT_BUNDLE_IDENTIFIER = app.missingpieces;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
 			};
@@ -326,22 +326,23 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = PiecesTask/PiecesTask.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "PiecesTask/missingpieces.entitlements";
 				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				CODE_SIGN_STYLE = Manual;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = P5RB3W3D58;
 				ENABLE_HARDENED_RUNTIME = YES;
+				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "PiecesTask/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.piecestask;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.missingpieces;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
 			};

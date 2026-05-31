@@ -4,7 +4,7 @@ import Foundation
 final class PiecesService: @unchecked Sendable {
     static let shared = PiecesService()
 
-    private let applicationID = "app.piecestask"
+    private let applicationID = "app.missingpieces"
     private let healthSession: URLSession
     private let fetchSession: URLSession
     private var cachedBaseURL: String?

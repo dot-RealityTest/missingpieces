@@ -25,7 +25,7 @@ enum PopoverLayout {
 }
 
 @main
-struct PiecesTaskApp: App {
+struct MissingPiecesApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {

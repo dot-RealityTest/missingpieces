@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="missingpieces is a macOS menu bar app that shows next steps from recent Pieces OS workstream summaries."
+    >
+    <title>missingpieces - Next steps from Pieces OS</title>
+    <link rel="icon" href="./assets/menu-bar-icon.png">
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./scroll.js" defer></script>
+  </head>
+  <body>
+    <div class="scroll-progress" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="missingpieces home">
+        <img
+          src="./assets/missingpieces-icon.png"
+          srcset="./assets/missingpieces-icon.png 1x, ./assets/missingpieces-icon@2x.png 2x"
+          alt=""
+          width="32"
+          height="32"
+          decoding="async"
+        >
+        <span>missingpieces</span>
+      </a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="#how">How it works</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#download">Download</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <img
+          class="hero-mark"
+          src="./assets/missingpieces-icon.png"
+          srcset="./assets/missingpieces-icon.png 1x, ./assets/missingpieces-icon@2x.png 2x"
+          alt=""
+          width="512"
+          height="512"
+          decoding="async"
+        >
+        <div class="hero-content">
+          <p class="eyebrow">A small macOS companion for Pieces OS</p>
+          <h1 id="hero-title">See the next steps Pieces already noticed.</h1>
+          <p class="hero-copy">
+            missingpieces lives in your menu bar and turns recent Pieces workstream summaries into a short,
+            calm list of follow-ups. Open it, check what matters, then get back to work.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#download">Download for macOS</a>
+            <a class="button secondary" href="https://pieces.app/" rel="noreferrer">Get Pieces OS</a>
+          </div>
+        </div>
+
+        <div class="desktop-scene" aria-label="Preview of the missingpieces popover">
+          <div class="menu-strip">
+            <span></span>
+            <span></span>
+            <span class="status-cluster">
+              <img src="./assets/menu-bar-icon.png" alt="" width="16" height="16" decoding="async">
+              <i></i>
+            </span>
+          </div>
+          <div class="popover-preview">
+            <div class="preview-header">
+              <div>
+                <strong>What you're missing</strong>
+                <span>Pieces OS connected</span>
+              </div>
+              <button type="button">Check again</button>
+            </div>
+            <div class="session">
+              <p class="session-title">Work session - 10:42 AM</p>
+              <div class="next-step">
+                <span class="accent blue"></span>
+                <div>
+                  <strong>Send the final release note</strong>
+                  <p>Copy the short update and attach the DMG.</p>
+                </div>
+              </div>
+              <div class="next-step">
+                <span class="accent violet"></span>
+                <div>
+                  <strong>Check Pieces parser edge cases</strong>
+                  <p>Review bullets from the latest workstream summary.</p>
+                </div>
+              </div>
+              <div class="next-step">
+                <span class="accent teal"></span>
+                <div>
+                  <strong>Mark done after triage</strong>
+                  <p>Keep the list quiet without changing Pieces.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="intro-band" aria-label="Product summary">
+        <p>
+          Pieces remembers the shape of your work. missingpieces gives that memory a tiny, practical doorway:
+          the next steps you may have missed.
+        </p>
+      </section>
+
+      <section class="section two-column" id="how" aria-labelledby="how-title">
+        <div class="section-heading">
+          <p class="eyebrow">Built around Pieces OS</p>
+          <h2 id="how-title">A read-only view of your recent work.</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <span>01</span>
+            <h3>Reads workstream summaries</h3>
+            <p>It asks Pieces OS for recent summaries and looks for the "Next Steps" section.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Groups by session</h3>
+            <p>Follow-ups stay tied to the work session they came from, so scanning feels natural.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Stays local and quiet</h3>
+            <p>No task database, no push back to Pieces, and no background polling.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section product-strip" aria-label="App behavior">
+        <div class="behavior-copy">
+          <p class="eyebrow">Menu bar first</p>
+          <h2>Glance, copy, mark done.</h2>
+          <p>
+            The app is meant for the moment between thoughts. Click a row to expand it, double-click to copy,
+            or mark it done locally when it is no longer useful.
+          </p>
+        </div>
+        <div class="behavior-list">
+          <div><span></span>Refresh when you open the popover, only if you want.</div>
+          <div><span></span>Use a visible cap so the list stays compact.</div>
+          <div><span></span>Restore marked-done items from Settings.</div>
+        </div>
+      </section>
+
+      <section class="section privacy" id="privacy" aria-labelledby="privacy-title">
+        <div>
+          <p class="eyebrow">Private by habit</p>
+          <h2 id="privacy-title">Designed to sit on top of Pieces, not replace it.</h2>
+        </div>
+        <p>
+          missingpieces depends on Pieces OS for memory. It only shows a small local view of follow-ups and
+          keeps your triage choices on your Mac.
+        </p>
+      </section>
+
+      <section class="download" id="download" aria-labelledby="download-title">
+        <div>
+          <img
+            src="./assets/missingpieces-icon.png"
+            srcset="./assets/missingpieces-icon.png 1x, ./assets/missingpieces-icon@2x.png 2x"
+            alt=""
+            width="84"
+            height="84"
+            loading="lazy"
+            decoding="async"
+          >
+          <p class="eyebrow">macOS 14+</p>
+          <h2 id="download-title">Install missingpieces.</h2>
+          <p>
+            You will need Pieces OS running locally. Once it is connected, missingpieces watches for recent
+            workstream summaries when you ask it to check.
+          </p>
+        </div>
+        <div class="download-actions">
+          <a class="button primary" href="https://github.com/dot-RealityTest/missingpieces/releases/latest/download/missingpieces-1.0.0-b2.dmg">Download DMG</a>
+          <a class="button secondary" href="https://docs.pieces.app/" rel="noreferrer">Pieces docs</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>missingpieces is an independent companion app for people already using Pieces OS.</p>
+      <a href="https://pieces.app/" rel="noreferrer">pieces.app</a>
+    </footer>
+  </body>
+</html>

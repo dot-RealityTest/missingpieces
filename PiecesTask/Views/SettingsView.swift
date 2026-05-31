@@ -2,7 +2,10 @@ import SwiftUI
 
 private enum SettingsLayout {
     static let width: CGFloat = 480
-    static let height: CGFloat = 400
+    /// Fits hero + three sections + footer without a tall empty scroll area.
+    static func height(markedDoneCount: Int) -> CGFloat {
+        markedDoneCount > 0 ? 368 : 292
+    }
 }
 
 struct SettingsView: View {
@@ -21,83 +24,8 @@ struct SettingsView: View {
                         .padding(.horizontal, 12)
                 }
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    SettingsGlassSection {
-                        SettingsToggleRow(
-                            title: "Check Pieces when I open the list",
-                            isOn: $appSettings.refreshOnPopoverOpen
-                        )
-                    }
-
-                    SettingsGlassSection {
-                        SettingsPickerRow(title: "Lookback", selection: $appSettings.lookbackDays) {
-                            Text("3 days").tag(3)
-                            Text("1 week").tag(7)
-                            Text("2 weeks").tag(14)
-                        }
-                        SettingsSectionDivider()
-                        SettingsPickerRow(title: "Show up to", selection: $appSettings.visibleItemLimit) {
-                            ForEach(AppSettings.visibleLimitOptions, id: \.self) { n in
-                                Text("\(n) follow-ups").tag(n)
-                            }
-                        }
-                    }
-
-                    SettingsGlassSection {
-                        Button {
-                            Task { await appState.refreshMissingFromPieces() }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "arrow.clockwise")
-                                    .font(.caption)
-                                Text("Refresh list")
-                                    .font(.system(size: 12.5))
-                                Spacer(minLength: 0)
-                                if appState.isLoading {
-                                    ProgressView()
-                                        .controlSize(.mini)
-                                }
-                            }
-                            .foregroundStyle(SettingsTheme.label)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(appState.isLoading)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-
-                        if !statusLine.isEmpty {
-                            SettingsSectionDivider()
-                            Text(statusLine)
-                                .font(.caption2)
-                                .foregroundStyle(SettingsTheme.secondaryLabel)
-                                .lineLimit(3)
-                                .padding(.horizontal, 10)
-                                .padding(.bottom, 8)
-                        }
-                    }
-
-                    if appSettings.dismissedFollowUpCount > 0 {
-                        SettingsGlassSection {
-                            SettingsLabeledRow(title: "Marked done") {
-                                Text("\(appSettings.dismissedFollowUpCount)")
-                                    .font(.caption)
-                                    .foregroundStyle(SettingsTheme.secondaryLabel)
-                            }
-                            SettingsSectionDivider()
-                            SettingsActionRow(
-                                title: "Show them again",
-                                systemImage: "eye"
-                            ) {
-                                Task { await appState.restoreDismissedFollowUps() }
-                            }
-                        }
-                    }
-                }
+            settingsForm
                 .padding(12)
-            }
-            .scrollIndicators(.hidden)
 
             settingsFooter
                 .overlay(alignment: .top) {
@@ -105,7 +33,10 @@ struct SettingsView: View {
                         .frame(height: 0.5)
                 }
         }
-        .frame(width: SettingsLayout.width, height: SettingsLayout.height)
+        .frame(
+            width: SettingsLayout.width,
+            height: SettingsLayout.height(markedDoneCount: appSettings.dismissedFollowUpCount)
+        )
         .settingsWindowBackground()
         .controlSize(.small)
         .onDisappear {
@@ -133,7 +64,7 @@ struct SettingsView: View {
             .frame(width: 22, height: 22)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text("Settings")
+                Text("missingpieces")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(Color.primary.opacity(0.72))
@@ -159,6 +90,82 @@ struct SettingsView: View {
         .padding(.horizontal, PopoverGlassStyle.chromeHorizontalPadding + 6)
         .padding(.top, 14)
         .padding(.bottom, 10)
+    }
+
+    private var settingsForm: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsGlassSection {
+                SettingsToggleRow(
+                    title: "Check Pieces when I open the list",
+                    isOn: $appSettings.refreshOnPopoverOpen
+                )
+            }
+
+            SettingsGlassSection {
+                SettingsPickerRow(title: "Lookback", selection: $appSettings.lookbackDays) {
+                    Text("3 days").tag(3)
+                    Text("1 week").tag(7)
+                    Text("2 weeks").tag(14)
+                }
+                SettingsSectionDivider()
+                SettingsPickerRow(title: "Show up to", selection: $appSettings.visibleItemLimit) {
+                    ForEach(AppSettings.visibleLimitOptions, id: \.self) { n in
+                        Text("\(n) follow-ups").tag(n)
+                    }
+                }
+            }
+
+            SettingsGlassSection {
+                Button {
+                    Task { await appState.refreshMissingFromPieces() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.caption)
+                        Text("Refresh list")
+                            .font(.system(size: 12.5))
+                        Spacer(minLength: 0)
+                        if appState.isLoading {
+                            ProgressView()
+                                .controlSize(.mini)
+                        }
+                    }
+                    .foregroundStyle(SettingsTheme.label)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(appState.isLoading)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+
+                if !statusLine.isEmpty {
+                    SettingsSectionDivider()
+                    Text(statusLine)
+                        .font(.caption2)
+                        .foregroundStyle(SettingsTheme.secondaryLabel)
+                        .lineLimit(3)
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 8)
+                }
+            }
+
+            if appSettings.dismissedFollowUpCount > 0 {
+                SettingsGlassSection {
+                    SettingsLabeledRow(title: "Marked done") {
+                        Text("\(appSettings.dismissedFollowUpCount)")
+                            .font(.caption)
+                            .foregroundStyle(SettingsTheme.secondaryLabel)
+                    }
+                    SettingsSectionDivider()
+                    SettingsActionRow(
+                        title: "Show them again",
+                        systemImage: "eye"
+                    ) {
+                        Task { await appState.restoreDismissedFollowUps() }
+                    }
+                }
+            }
+        }
     }
 
     private var settingsFooter: some View {

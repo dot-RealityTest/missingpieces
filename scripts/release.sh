@@ -4,10 +4,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-APP_NAME="PiecesTask"
+APP_NAME="missingpieces"
 SIGN_IDENTITY="${SIGN_IDENTITY:-Developer ID Application}"
 TEAM_ID="${DEVELOPMENT_TEAM:-P5RB3W3D58}"
-ENTITLEMENTS="$ROOT/PiecesTask/PiecesTask.entitlements"
+ENTITLEMENTS="$ROOT/PiecesTask/missingpieces.entitlements"
 RELEASE_DIR="$ROOT/release"
 STAGING="$RELEASE_DIR/dmg-staging"
 
@@ -16,8 +16,9 @@ BUILD="$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' PiecesTask/Info.plis
 DMG_PATH="$RELEASE_DIR/${APP_NAME}-${VERSION}-b${BUILD}.dmg"
 
 echo "==> Building ${APP_NAME} ${VERSION} (${BUILD}) Release…"
-xcodebuild -project PiecesTask.xcodeproj -target PiecesTask -configuration Release \
+xcodebuild -project PiecesTask.xcodeproj -target "$APP_NAME" -configuration Release \
   CODE_SIGN_IDENTITY="$SIGN_IDENTITY" \
+  CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
   DEVELOPMENT_TEAM="$TEAM_ID" \
   ENABLE_HARDENED_RUNTIME=YES \
   CODE_SIGN_ENTITLEMENTS="$ENTITLEMENTS" \
@@ -30,6 +31,7 @@ if [[ ! -d "$APP" ]]; then
 fi
 
 echo "==> Verifying code signature…"
+codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$SIGN_IDENTITY" "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
 spctl --assess --type execute --verbose=4 "$APP" || true
 
@@ -38,7 +40,7 @@ rm -rf "$STAGING" "$DMG_PATH"
 mkdir -p "$STAGING"
 ditto "$APP" "$STAGING/${APP_NAME}.app"
 ln -s /Applications "$STAGING/Applications"
-cp "$ROOT/release/INSTALL.txt" "$STAGING/Install PiecesTask.txt"
+cp "$ROOT/release/INSTALL.txt" "$STAGING/Install missingpieces.txt"
 
 hdiutil create -volname "$APP_NAME" -srcfolder "$STAGING" -ov -format UDZO "$DMG_PATH"
 codesign --sign "$SIGN_IDENTITY" --timestamp "$DMG_PATH"

@@ -22,7 +22,7 @@ final class SettingsWindowPresenter: NSObject, NSWindowDelegate {
 
     func open() {
         guard let appState, let appSettings else {
-            NSLog("PiecesTask: Settings not configured yet.")
+            NSLog("missingpieces: Settings not configured yet.")
             return
         }
 
@@ -30,9 +30,11 @@ final class SettingsWindowPresenter: NSObject, NSWindowDelegate {
         appState.cancelRefresh()
         dismissMenuBarPopover()
 
+        let contentSize = settingsContentSize(markedDoneCount: appSettings.dismissedFollowUpCount)
+
         if let window {
             applyWindowChrome(to: window)
-            window.setContentSize(NSSize(width: 480, height: 400))
+            window.setContentSize(contentSize)
             window.center()
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -49,9 +51,9 @@ final class SettingsWindowPresenter: NSObject, NSWindowDelegate {
         hosting.safeAreaRegions = []
 
         let window = NSWindow(contentViewController: hosting)
-        window.title = "PiecesTask Settings"
+        window.title = "missingpieces Settings"
         window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
-        window.setContentSize(NSSize(width: 480, height: 400))
+        window.setContentSize(contentSize)
         window.center()
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
@@ -90,5 +92,10 @@ final class SettingsWindowPresenter: NSObject, NSWindowDelegate {
                 window.orderOut(nil)
             }
         }
+    }
+
+    private func settingsContentSize(markedDoneCount: Int) -> NSSize {
+        let height: CGFloat = markedDoneCount > 0 ? 368 : 292
+        return NSSize(width: 480, height: height)
     }
 }
