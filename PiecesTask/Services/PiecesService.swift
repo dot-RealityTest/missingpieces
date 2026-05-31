@@ -18,7 +18,10 @@ final class PiecesService: @unchecked Sendable {
         healthConfig.timeoutIntervalForResource = 3
         self.healthSession = URLSession(configuration: healthConfig)
 
-        let fetchConfig = URLSessionConfiguration.default
+        let fetchConfig = URLSessionConfiguration.ephemeral
+        fetchConfig.requestCachePolicy = .reloadIgnoringLocalCacheData
+        fetchConfig.urlCache = nil
+        fetchConfig.httpCookieStorage = nil
         fetchConfig.timeoutIntervalForRequest = 8
         fetchConfig.timeoutIntervalForResource = 20
         self.fetchSession = URLSession(configuration: fetchConfig)
@@ -212,6 +215,7 @@ final class PiecesService: @unchecked Sendable {
         guard let base = await resolveBaseURL() else { throw PiecesError.notAvailable }
         guard let url = URL(string: "\(base)\(path)") else { throw PiecesError.invalidURL }
         var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue(applicationID, forHTTPHeaderField: "X-Application-ID")
         let (data, response) = try await fetchSession.data(for: request)
         try validateHTTP(response, data: data)
@@ -225,6 +229,7 @@ final class PiecesService: @unchecked Sendable {
         guard let base = await resolveBaseURL() else { throw PiecesError.notAvailable }
         guard let url = URL(string: "\(base)\(path)") else { throw PiecesError.invalidURL }
         var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(applicationID, forHTTPHeaderField: "X-Application-ID")

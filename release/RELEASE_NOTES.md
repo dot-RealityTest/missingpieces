@@ -1,10 +1,12 @@
-# missingpieces 1.0.0 (build 2)
+# missingpieces 1.0.0 (build 3)
 
 Lean menu bar app that shows next steps from recent Pieces OS workstream summaries.
 
+Build 3 hardens local privacy: Pieces API reads use an ephemeral no-cache session, and locally marked-done rows store hashed IDs only.
+
 ## Install
 
-Open `missingpieces-1.0.0-b2.dmg`, drag to Applications, launch from there.
+Open `missingpieces-1.0.0-b3.dmg`, drag to Applications, launch from there.
 
 ## Requirements
 

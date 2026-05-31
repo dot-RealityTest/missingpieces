@@ -169,7 +169,7 @@ for cid, cname in [(BCDID, "Debug"), (BCRID, "Release")]:
         L(f"\t\t\t\tCODE_SIGN_IDENTITY = \"Developer ID Application\";")
         L(f"\t\t\t\tCODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;")
         L(f"\t\t\t\tCODE_SIGN_STYLE = Manual;")
-        L(f"\t\t\t\tCURRENT_PROJECT_VERSION = 2;")
+        L(f"\t\t\t\tCURRENT_PROJECT_VERSION = 3;")
         L(f"\t\t\t\tDEVELOPMENT_TEAM = P5RB3W3D58;")
         L(f"\t\t\t\tENABLE_HARDENED_RUNTIME = YES;")
     else:

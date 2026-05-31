@@ -3,11 +3,11 @@ import Foundation
 
 enum FollowUpItemID {
     static func make(summaryID: String, stepText: String) -> String {
-        let normalized = stepText
+        let normalizedStep = stepText
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
-        let digest = SHA256.hash(data: Data(normalized.utf8))
-        let hex = digest.prefix(8).map { String(format: "%02x", $0) }.joined()
-        return "\(summaryID)-\(hex)"
+        let rawID = "\(summaryID)\n\(normalizedStep)"
+        let digest = SHA256.hash(data: Data(rawID.utf8))
+        return digest.prefix(16).map { String(format: "%02x", $0) }.joined()
     }
 }

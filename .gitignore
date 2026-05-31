@@ -14,6 +14,11 @@ xcuserdata/
 .handoff/
 .project-cleanup-backups/
 grep
+AGENTS.md
+PROJECT_CATCH_UP.md
+PROJECT_GUIDE.md
+PROJECT_VERDICT.md
+todos.md
 
 # Release artifacts
 release/dmg-staging/

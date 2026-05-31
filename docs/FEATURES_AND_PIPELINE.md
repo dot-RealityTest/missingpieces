@@ -16,7 +16,7 @@ Plain reference for what the **lean `main`** build does and how data moves throu
 | Local **Mark done** (hide) | Launch at login, push notifications |
 | Copy / expand row interactions | Multi-tab Settings, connectivity test UI |
 
-**Version:** 1.0.0 (build 2) · **Bundle ID:** `app.missingpieces` · **Minimum macOS:** 14.0
+**Version:** 1.0.0 (build 3) · **Bundle ID:** `app.missingpieces` · **Minimum macOS:** 14.0
 
 ---
 
@@ -108,7 +108,7 @@ flowchart LR
 3. **Per summary** — `GET /workstream_summary/{id}` → newest annotation IDs → `GET /annotation/{id}` for `SUMMARY` markdown.
 4. **Parse** — `PiecesNextStepsParser` finds `### **Next Steps**` and bullet lines; builds `displayTitle` / `displaySubtitle` for scanning.
 5. **Cap** — Limits per summary, per session dedupe, and global max from Settings (`maxSummaries`, `maxStepsPerSummary`, `maxTotal`).
-6. **Local filter** — Drop rows whose `FollowUpItemID` (SHA256 of summary ID + normalized text) is in dismissed set.
+6. **Local filter** — Drop rows whose `FollowUpItemID` (SHA256 of summary ID + normalized text, stored as a hash only) is in dismissed set.
 7. **UI** — `RootPopoverView` renders sections; `MissingRowView` handles expand/copy/done.
 
 ### Refresh policy
@@ -138,7 +138,7 @@ xcodebuild -project PiecesTask.xcodeproj -target missingpieces -configuration De
 | Output | Path |
 |--------|------|
 | Release app | `build/Release/missingpieces.app` |
-| DMG | `release/missingpieces-1.0.0-b2.dmg` |
+| DMG | `release/missingpieces-1.0.0-b3.dmg` |
 
 Release build uses **Developer ID** signing, **hardened runtime**, and `PiecesTask/missingpieces.entitlements`. The release DMG is signed, notarized, and stapled.
 
