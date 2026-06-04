@@ -4,7 +4,7 @@
 
 missingpieces shows the next steps that Pieces OS already noticed in recent workstream summaries. Open the menu bar popover, scan what you may have missed, copy what matters, and mark the rest done locally.
 
-[Download DMG](https://github.com/dot-RealityTest/missingpieces/releases/latest/download/missingpieces-1.0.0-b3.dmg) | [Landing Page](https://dot-realitytest.github.io/missingpieces/) | [Latest Release](https://github.com/dot-RealityTest/missingpieces/releases/latest) | [Release Notes](release/RELEASE_NOTES.md) | [Pieces OS](https://pieces.app/)
+[Download DMG](https://github.com/aka-kika/missingpieces/releases/latest/download/missingpieces-1.0.0-b3.dmg) | [Landing Page](https://aka-kika.github.io/missingpieces/) | [Latest Release](https://github.com/aka-kika/missingpieces/releases/latest) | [Release Notes](release/RELEASE_NOTES.md) | [Pieces OS](https://pieces.app/)
 
 ## Why It Exists
 
@@ -34,7 +34,7 @@ missingpieces usually connects to Pieces OS on port `39300`, with a fallback to 
 
 ## Install
 
-1. Download [missingpieces-1.0.0-b3.dmg](https://github.com/dot-RealityTest/missingpieces/releases/latest/download/missingpieces-1.0.0-b3.dmg).
+1. Download [missingpieces-1.0.0-b3.dmg](https://github.com/aka-kika/missingpieces/releases/latest/download/missingpieces-1.0.0-b3.dmg).
 2. Open the DMG.
 3. Drag `missingpieces.app` to Applications.
 4. Launch `missingpieces` from Applications.
@@ -90,7 +90,7 @@ It does not:
 Clone the repository:
 
 ```bash
-git clone https://github.com/dot-RealityTest/missingpieces.git
+git clone https://github.com/aka-kika/missingpieces.git
 cd missingpieces
 ```
 
